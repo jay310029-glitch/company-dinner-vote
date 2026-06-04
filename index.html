@@ -6,7 +6,7 @@
     <title>聚餐投票 🍽️</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .selected-date { background-color: #3b82f6 !important; color: white; border-radius: 9999px; }
+        .selected-date { background-color: #3b82f6 !important; color: white !important; border-radius: 9999px; }
         .drag-item { cursor: grab; }
         .drag-item:active { cursor: grabbing; }
     </style>
@@ -22,23 +22,54 @@
 
         <div class="mb-8">
             <h2 class="font-bold text-lg mb-2">1. 選擇可參加日期 (多選)</h2>
-            <div class="bg-gray-50 p-4 rounded-2xl border border-gray-200">
-                <div class="text-center font-bold mb-3 text-gray-600">2026年 6月</div>
-                <div class="grid grid-cols-7 gap-1 text-center text-xs text-gray-400 mb-2">
-                    <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+            <p class="text-xs text-gray-400 mb-3">可跨月選擇多個日期</p>
+            
+            <div class="space-y-6">
+                <div class="bg-gray-50 p-4 rounded-2xl border border-gray-200">
+                    <div class="text-center font-bold mb-3 text-gray-600">2026年 6月</div>
+                    <div class="grid grid-cols-7 gap-1 text-center text-xs text-gray-400 mb-2">
+                        <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1" id="calendar-days-6"></div>
                 </div>
-                <div class="grid grid-cols-7 gap-1" id="calendar-days"></div>
+
+                <div class="bg-gray-50 p-4 rounded-2xl border border-gray-200">
+                    <div class="text-center font-bold mb-3 text-gray-600">2026年 7月</div>
+                    <div class="grid grid-cols-7 gap-1 text-center text-xs text-gray-400 mb-2">
+                        <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1" id="calendar-days-7"></div>
+                </div>
             </div>
-            <div class="mt-2 text-sm text-blue-600">已選：<span id="date-preview">無</span></div>
+            
+            <div class="mt-3 text-sm text-blue-600">已選日期：<span id="date-preview" class="font-semibold">無</span></div>
         </div>
 
         <div class="mb-8">
             <h2 class="font-bold text-lg mb-2">2. 排列餐廳志願 (拖曳排序)</h2>
-            <p class="text-xs text-gray-400 mb-3">最上方為第 1 志願</p>
-            <ul id="rank-list" class="space-y-2">
-                <li class="drag-item p-4 bg-white border-2 border-blue-100 rounded-xl flex justify-between shadow-sm" draggable="true" data-id="A"><span>1. 選項 A：築間火鍋</span><span class="text-gray-300">≡</span></li>
-                <li class="drag-item p-4 bg-white border-2 border-blue-100 rounded-xl flex justify-between shadow-sm" draggable="true" data-id="B"><span>2. 選項 B：響食天堂</span><span class="text-gray-300">≡</span></li>
-                <li class="drag-item p-4 bg-white border-2 border-blue-100 rounded-xl flex justify-between shadow-sm" draggable="true" data-id="C"><span>3. 選項 C：屋馬燒肉</span><span class="text-gray-300">≡</span></li>
+            <p class="text-xs text-gray-400 mb-3">最上方為第 1 志願，☰ 可拖曳</p>
+            <ul id="rank-list" class="space-y-3">
+                <li class="drag-item p-4 bg-white border-2 border-blue-100 rounded-xl flex items-center justify-between shadow-sm" draggable="true" data-id="A">
+                    <div class="flex flex-col pr-2">
+                        <span class="font-medium text-gray-800">1. 選項 A：URBAN PARADISE</span>
+                        <a href="https://www.urbanparadise.com.tw/" target="_blank" class="text-xs text-blue-500 hover:underline mt-1 inline-flex items-center stop-drag">🔗 查看官方網站</a>
+                    </div>
+                    <span class="text-gray-300 text-xl font-bold select-none">☰</span>
+                </li>
+                <li class="drag-item p-4 bg-white border-2 border-blue-100 rounded-xl flex items-center justify-between shadow-sm" draggable="true" data-id="B">
+                    <div class="flex flex-col pr-2">
+                        <span class="font-medium text-gray-800">2. 選項 B：寒舍艾美 探索廚房</span>
+                        <a href="https://www.lemeridien-taipei.com/webhtml/pages/restaurant/details.aspx?id=1" target="_blank" class="text-xs text-blue-500 hover:underline mt-1 inline-flex items-center stop-drag">🔗 查看官方網站</a>
+                    </div>
+                    <span class="text-gray-300 text-xl font-bold select-none">☰</span>
+                </li>
+                <li class="drag-item p-4 bg-white border-2 border-blue-100 rounded-xl flex items-center justify-between shadow-sm" draggable="true" data-id="C">
+                    <div class="flex flex-col pr-2">
+                        <span class="font-medium text-gray-800">3. 選項 C：旭集 和食集錦</span>
+                        <a href="https://www.xujisun.com.tw/" target="_blank" class="text-xs text-blue-500 hover:underline mt-1 inline-flex items-center stop-drag">🔗 查看官方網站</a>
+                    </div>
+                    <span class="text-gray-300 text-xl font-bold select-none">☰</span>
+                </li>
             </ul>
         </div>
 
@@ -46,41 +77,89 @@
     </div>
 
     <script>
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbxcxjtE9qXlG9tWWaoVIwxPowQ6wT68LJPiucVBNmJX4C_Oe2MDpSxrRdfABAzg9m1Aqw/exec"; // ⚠️ 改成你的網址
+        // ⚠️ 請替換成你部署好的 Google Apps Script 網頁應用程式網址
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbxcxjtE9qXlG9tWWaoVIwxPowQ6wT68LJPiucVBNmJX4C_Oe2MDpSxrRdfABAzg9m1Aqw/exec"; 
         const selectedDates = new Set();
 
-        // 生成日曆 (簡化版)
-        const daysContainer = document.getElementById('calendar-days');
-        for(let i=0; i<1; i++) daysContainer.appendChild(document.createElement('div')); // 補位
+        // 更新日期預覽顯示
+        function updateDatePreview() {
+            if (selectedDates.size === 0) {
+                document.getElementById('date-preview').innerText = '無';
+                return;
+            }
+            const sortedDates = Array.from(selectedDates).sort((a, b) => {
+                const [m1, d1] = a.split('/').map(Number);
+                const [m2, d2] = b.split('/').map(Number);
+                return m1 === m2 ? d1 - d2 : m1 - m2;
+            });
+            document.getElementById('date-preview').innerText = sortedDates.join(', ');
+        }
+
+        // 日期點擊事件處理
+        function handleDateClick(dateStr, btn) {
+            if(selectedDates.has(dateStr)) { 
+                selectedDates.delete(dateStr); 
+                btn.classList.remove('selected-date'); 
+            } else { 
+                selectedDates.add(dateStr); 
+                btn.classList.add('selected-date'); 
+            }
+            updateDatePreview();
+        }
+
+        // --- 生成 6 月日曆 (2026年 6/1 是星期一，前補 1 個格子，共 30 天) ---
+        const daysContainer6 = document.getElementById('calendar-days-6');
+        for(let i=0; i<1; i++) daysContainer6.appendChild(document.createElement('div')); 
         for(let d=1; d<=30; d++){
             const btn = document.createElement('button');
             btn.innerText = d;
-            btn.className = "p-2 text-sm hover:bg-gray-200 rounded-full transition";
-            btn.onclick = () => {
-                const ds = `6/${d}`;
-                if(selectedDates.has(ds)) { selectedDates.delete(ds); btn.classList.remove('selected-date'); }
-                else { selectedDates.add(ds); btn.classList.add('selected-date'); }
-                document.getElementById('date-preview').innerText = selectedDates.size ? Array.from(selectedDates).sort().join(', ') : '無';
-            };
-            daysContainer.appendChild(btn);
+            btn.className = "p-2 text-sm hover:bg-gray-200 rounded-full transition aspect-square flex items-center justify-center font-medium text-gray-700";
+            btn.onclick = () => handleDateClick(`6/${d}`, btn);
+            daysContainer6.appendChild(btn);
         }
 
-        // 拖曳排序邏輯
+        // --- 生成 7 月日曆 (2026年 7/1 是星期三，前補 3 個格子，共 31 天) ---
+        const daysContainer7 = document.getElementById('calendar-days-7');
+        for(let i=0; i<3; i++) daysContainer7.appendChild(document.createElement('div')); 
+        for(let d=1; d<=31; d++){
+            const btn = document.createElement('button');
+            btn.innerText = d;
+            btn.className = "p-2 text-sm hover:bg-gray-200 rounded-full transition aspect-square flex items-center justify-center font-medium text-gray-700";
+            btn.onclick = () => handleDateClick(`7/${d}`, btn);
+            daysContainer7.appendChild(btn);
+        }
+
+        // --- 拖曳排序邏輯 ---
         const list = document.getElementById('rank-list');
         let dragEl;
-        list.ondragstart = e => { dragEl = e.target; e.target.classList.add('opacity-40'); };
+        
+        list.ondragstart = e => { 
+            // 如果點擊到的是超連結，不要觸發拖曳
+            if (e.target.classList.contains('stop-drag')) {
+                e.preventDefault();
+                return;
+            }
+            dragEl = e.target.closest('li'); 
+            dragEl.classList.add('opacity-40'); 
+        };
         list.ondragover = e => { e.preventDefault(); const next = e.target.closest('li'); if(next && next !== dragEl) list.insertBefore(dragEl, next); };
         list.ondragend = e => { 
-            e.target.classList.remove('opacity-40');
+            if(dragEl) dragEl.classList.remove('opacity-40');
             document.querySelectorAll('#rank-list span:first-child').forEach((s,i) => {
                 s.innerText = `${i+1}. ${s.innerText.split('. ')[1]}`;
             });
         };
 
-        // 送出資料
+        // 防止點擊超連結時觸發父元素的拖曳選取
+        document.querySelectorAll('.stop-drag').forEach(a => {
+            a.addEventListener('mousedown', (e) => e.stopPropagation());
+            a.addEventListener('touchstart', (e) => e.stopPropagation());
+        });
+
+        // --- 送出資料 ---
         document.getElementById('submit').onclick = function() {
-            const name = document.getElementById('username').value;
-            if(!name || !selectedDates.size) return alert('姓名與日期必填！');
+            const name = document.getElementById('username').value.trim();
+            if(!name || !selectedDates.size) return alert('請填寫姓名並至少選擇一個日期！');
             
             const btn = this;
             btn.disabled = true; btn.innerText = "傳送中...";
@@ -92,8 +171,20 @@
                 body: JSON.stringify({ name, dates: Array.from(selectedDates), rank }),
                 headers: { 'Content-Type': 'text/plain' }
             })
-            .then(() => { alert('投票成功！'); location.reload(); })
-            .catch(() => { alert('失敗，請檢查網址或權限'); btn.disabled = false; btn.innerText = "重新提交"; });
+            .then(res => res.json())
+            .then(data => {
+                if(data.result === "success") {
+                    alert('🎉 投票成功！感謝您的參與。');
+                    location.reload();
+                } else {
+                    alert('寫入失敗：' + data.message);
+                    btn.disabled = false; btn.innerText = "重新提交";
+                }
+            })
+            .catch(() => { 
+                alert('連線失敗，請確認 Apps Script 部署 URL 是否正確且權限已開至「所有人」'); 
+                btn.disabled = false; btn.innerText = "重新提交"; 
+            });
         };
     </script>
 </body>

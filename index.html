@@ -126,8 +126,10 @@
         };
 
         function updateDatePreview() {
+            const previewEl = document.getElementById('date-preview');
+            if (!previewEl) return;
             if (selectedDates.size === 0) {
-                document.getElementById('date-preview').innerText = '無';
+                previewEl.innerText = '無';
                 return;
             }
             const sortedDates = Array.from(selectedDates).sort((a, b) => {
@@ -135,7 +137,7 @@
                 const [m2, d2] = b.split('/').map(Number);
                 return m1 === m2 ? d1 - d2 : m1 - m2;
             });
-            document.getElementById('date-preview').innerText = sortedDates.join(', ');
+            previewEl.innerText = sortedDates.join(', ');
         }
 
         function refreshRankNumbers() {
@@ -164,7 +166,8 @@
             document.querySelectorAll('.selected-date').forEach(el => el.classList.remove('selected-date'));
             updateDatePreview();
             sortRestaurantDOM(['A', 'B', 'C']);
-            document.getElementById('status-box').classList.add('hidden');
+            const statusBox = document.getElementById('status-box');
+            if (statusBox) statusBox.classList.add('hidden');
         }
 
         function handleDateClick(dateStr, btn) {
@@ -178,27 +181,32 @@
             updateDatePreview();
         }
 
-        // 生成日曆
+        // 生成 6 月日曆
         const daysContainer6 = document.getElementById('calendar-days-6');
-        for(let i=0; i<1; i++) daysContainer6.appendChild(document.createElement('div')); 
-        for(let d=1; d<=30; d++){
-            const btn = document.createElement('button');
-            btn.innerText = d;
-            btn.className = "date-btn-6 p-2 text-sm hover:bg-gray-200 rounded-full transition aspect-square flex items-center justify-center font-medium text-gray-700";
-            btn.dataset.date = `6/${d}`;
-            btn.onclick = () => handleDateClick(`6/${d}`, btn);
-            daysContainer6.appendChild(btn);
+        if (daysContainer6) {
+            for(let i=0; i<1; i++) daysContainer6.appendChild(document.createElement('div')); 
+            for(let d=1; d<=30; d++){
+                const btn = document.createElement('button');
+                btn.innerText = d;
+                btn.className = "date-btn-6 p-2 text-sm hover:bg-gray-200 rounded-full transition aspect-square flex items-center justify-center font-medium text-gray-700";
+                btn.dataset.date = `6/${d}`;
+                btn.onclick = () => handleDateClick(`6/${d}`, btn);
+                daysContainer6.appendChild(btn);
+            }
         }
 
+        // 生成 7 月日曆
         const daysContainer7 = document.getElementById('calendar-days-7');
-        for(let i=0; i<3; i++) daysContainer7.appendChild(document.createElement('div')); 
-        for(let d=1; d<=31; d++){
-            const btn = document.createElement('button');
-            btn.innerText = d;
-            btn.className = "date-btn-7 p-2 text-sm hover:bg-gray-200 rounded-full transition aspect-square flex items-center justify-center font-medium text-gray-700";
-            btn.dataset.date = `7/${d}`;
-            btn.onclick = () => handleDateClick(`7/${d}`, btn);
-            daysContainer7.appendChild(btn);
+        if (daysContainer7) {
+            for(let i=0; i<3; i++) daysContainer7.appendChild(document.createElement('div')); 
+            for(let d=1; d<=31; d++){
+                const btn = document.createElement('button');
+                btn.innerText = d;
+                btn.className = "date-btn-7 p-2 text-sm hover:bg-gray-200 rounded-full transition aspect-square flex items-center justify-center font-medium text-gray-700";
+                btn.dataset.date = `7/${d}`;
+                btn.onclick = () => handleDateClick(`7/${d}`, btn);
+                daysContainer7.appendChild(btn);
+            }
         }
 
         // 拖曳排序
@@ -228,11 +236,12 @@
             a.addEventListener('touchstart', (e) => e.stopPropagation());
         });
 
-        // 讀取統計資料
+        // 讀取全體即時統計進度
         function loadGlobalSummary() {
-            fetch(`${GAS_URL}?_nocache=${Date.now()}`)
+            const cacheBuster = `${GAS_URL}?_nocache=${Date.now()}`;
+            fetch(cacheBuster)
             .then(res => {
-                if (!res.ok) throw new Error("網路連線回應異常");
+                if (!res.ok) throw new Error("網路請求回應異常");
                 return res.json();
             })
             .then(data => {
@@ -240,7 +249,8 @@
                     const votes = data.totalVotes;
                     const totalPeople = votes.length;
                     
-                    document.getElementById('total-count-badge').innerText = `共 ${totalPeople} 人投票`;
+                    const badgeEl = document.getElementById('total-count-badge');
+                    if (badgeEl) badgeEl.innerText = `共 ${totalPeople} 人投票`;
                     
                     if (totalPeople === 0) {
                         document.getElementById('top-dates-container').innerHTML = `<p class="text-gray-400 text-xs italic">目前尚無人投票</p>`;
@@ -248,7 +258,7 @@
                         return;
                     }
 
-                    // 1. 日期統計
+                    // 1. 日期開票統計
                     const dateCounts = {};
                     votes.forEach(v => {
                         if (v && Array.isArray(v.dates)) {
@@ -263,4 +273,149 @@
                         dateHtml += `
                             <div>
                                 <div class="flex justify-between text-xs mb-1"><span>📅 ${date}</span><span class="font-bold text-blue-600">${count} 票 (${pct}%)</span></div>
-                                <div class="w-full bg-gray-100 rounded-full h-2"><div class="bg-blue-500 h-2 rounded-full transition-all duration-500" style="width: ${pct}%
+                                <div class="w-full bg-gray-100 rounded-full h-2"><div class="bg-blue-500 h-2 rounded-full transition-all duration-500" style="width: ${pct}%"></div></div>
+                            </div>`;
+                    });
+                    document.getElementById('top-dates-container').innerHTML = dateHtml || `<p class="text-gray-400 text-xs italic">尚未有交集日期</p>`;
+
+                    // 2. 餐廳積分權重統計
+                    const restaurantScores = { 'A': 0, 'B': 0, 'C': 0 };
+                    votes.forEach(v => {
+                        if (v && Array.isArray(v.rank)) {
+                            v.rank.forEach((id, index) => {
+                                if (restaurantScores[id] !== undefined) {
+                                    restaurantScores[id] += (3 - index); 
+                                }
+                            });
+                        }
+                    });
+
+                    const maxPossibleScore = totalPeople * 3;
+                    const sortedRestaurants = Object.entries(restaurantScores).sort((a, b) => b[1] - a[1]);
+                    
+                    let restHtml = "";
+                    const colors = { 'A': 'bg-orange-400', 'B': 'bg-purple-500', 'C': 'bg-amber-500' };
+                    sortedRestaurants.forEach(([id, score], idx) => {
+                        const pct = maxPossibleScore > 0 ? Math.round((score / maxPossibleScore) * 100) : 0;
+                        const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : "🥉";
+                        restHtml += `
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="font-medium text-gray-800">${medal} ${restaurantNames[id]}</span>
+                                    <span class="text-xs font-bold text-gray-500">${score} 分</span>
+                                </div>
+                                <div class="w-full bg-gray-100 rounded-full h-3">
+                                    <div class="${colors[id]} h-3 rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+                                </div>
+                            </div>`;
+                    });
+                    document.getElementById('restaurant-scores-container').innerHTML = restHtml;
+                }
+            })
+            .catch(err => {
+                console.error("更新看板異常:", err);
+                const badgeEl = document.getElementById('total-count-badge');
+                if (badgeEl) badgeEl.innerText = "連線異常";
+            });
+        }
+
+        // 讀取個人歷史紀錄
+        const loadHistoryBtn = document.getElementById('load-history');
+        if (loadHistoryBtn) {
+            loadHistoryBtn.onclick = function() {
+                const name = document.getElementById('username').value.trim();
+                if (!name) return alert('請先輸入姓名再點擊讀取！');
+                
+                const loadBtn = this;
+                loadBtn.disabled = true; loadBtn.innerText = "讀取中...";
+                
+                fetch(`${GAS_URL}?name=${encodeURIComponent(name)}&_nocache=${Date.now()}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.result === "success") {
+                        if (data.exists) {
+                            selectedDates.clear();
+                            document.querySelectorAll('.selected-date').forEach(el => el.classList.remove('selected-date'));
+                            
+                            data.dates.forEach(dateStr => {
+                                selectedDates.add(dateStr);
+                                const btn = document.querySelector(`[data-date="${dateStr}"]`);
+                                if (btn) btn.classList.add('selected-date');
+                            });
+                            updateDatePreview();
+                            
+                            if (data.rank && data.rank.length > 0) {
+                                sortRestaurantDOM(data.rank);
+                            }
+                            
+                            showStatus(`📅 已成功載入「${name}」上次的投票紀錄！您現在可以進行修改並重新提交。`, "bg-amber-50", "text-amber-700", "border-amber-200");
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                        } else {
+                            resetFormToDefault();
+                            alert(`查無「${name}」的投票紀錄，已為您清空介面，請直接填寫新的投票！`);
+                        }
+                    } else {
+                        alert('讀取失敗：' + data.message);
+                    }
+                })
+                .catch(() => alert('連線失敗，請確認 API URL 是否正確。'))
+                .finally(() => { loadBtn.disabled = false; loadBtn.innerText = "讀取紀錄"; });
+            };
+        }
+
+        function showStatus(text, bgColor, textColor, borderColor) {
+            const box = document.getElementById('status-box');
+            if (box) {
+                box.className = `mb-6 p-4 rounded-2xl border text-center text-sm font-medium ${bgColor} ${textColor} ${borderColor}`;
+                box.innerText = text;
+                box.classList.remove('hidden');
+            }
+        }
+
+        // 送出/更新資料
+        const submitBtn = document.getElementById('submit');
+        if (submitBtn) {
+            submitBtn.onclick = function() {
+                const name = document.getElementById('username').value.trim();
+                if(!name || !selectedDates.size) return alert('請填寫姓名並至少選擇一個日期！');
+                
+                const btn = this;
+                btn.disabled = true; btn.innerText = "傳送中...";
+                
+                const rank = Array.from(document.querySelectorAll('#rank-list li')).map(li => li.dataset.id);
+                
+                fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ name, dates: Array.from(selectedDates), rank }),
+                    headers: { 'Content-Type': 'text/plain' }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.result === "success") {
+                        const actionText = data.action === "updated" ? "更新" : "送出";
+                        
+                        const readableRank = rank.map(id => {
+                            if(id === 'A') return 'URBAN';
+                            if(id === 'B') return '寒舍艾美';
+                            return '旭集';
+                        }).join(' > ');
+
+                        showStatus(`🎉 成功${actionText}投票結果！\n姓名：${name}\n日期：${Array.from(selectedDates).sort().join(', ')}\n順序：${readableRank}`, "bg-emerald-50", "text-emerald-700", "border-emerald-200");
+                        alert(`投票成功！已${actionText}您的紀錄。`);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        loadGlobalSummary();
+                    } else {
+                        alert('寫入失敗：' + data.message);
+                    }
+                })
+                .catch(() => alert('連線失敗，請檢查權限設定。'))
+                .finally(() => { btn.disabled = false; btn.innerText = "重新提交投票"; });
+            };
+        }
+
+        // 頁面初次自動初始化
+        refreshRankNumbers();
+        loadGlobalSummary();
+    </script>
+</body>
+</html>

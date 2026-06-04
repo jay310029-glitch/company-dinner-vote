@@ -15,10 +15,16 @@
     <div class="max-w-md mx-auto bg-white rounded-3xl shadow-lg p-6">
         <h1 class="text-2xl font-bold text-center mb-6">聚餐時間與餐廳投票</h1>
         
-        <div class="mb-6">
+        <div class="mb-6 bg-blue-50 p-4 rounded-2xl border border-blue-100">
             <label class="block text-gray-700 font-bold mb-2">您的姓名</label>
-            <input type="text" id="username" class="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-blue-500 outline-none" placeholder="請輸入姓名">
+            <div class="flex space-x-2">
+                <input type="text" id="username" class="flex-1 border-2 border-gray-200 rounded-xl p-3 focus:border-blue-500 outline-none bg-white" placeholder="請輸入姓名">
+                <button id="load-history" class="bg-blue-500 text-white font-semibold px-4 rounded-xl hover:bg-blue-600 transition text-sm whitespace-nowrap">讀取紀錄</button>
+            </div>
+            <p class="text-xs text-gray-400 mt-2">💡 輸入姓名點擊「讀取紀錄」可修改過去的投票。</p>
         </div>
+
+        <div id="status-box" class="hidden mb-6 p-4 rounded-2xl border text-center font-medium"></div>
 
         <div class="mb-8">
             <h2 class="font-bold text-lg mb-2">1. 選擇可參加日期 (多選)</h2>
@@ -51,21 +57,21 @@
             <ul id="rank-list" class="space-y-3">
                 <li class="drag-item p-4 bg-white border-2 border-blue-100 rounded-xl flex items-center justify-between shadow-sm" draggable="true" data-id="A">
                     <div class="flex flex-col pr-2">
-                        <span class="font-medium text-gray-800">1. 選項 A：URBAN PARADISE</span>
+                        <span class="restaurant-name font-medium text-gray-800">選項 A：URBAN PARADISE</span>
                         <a href="https://www.urbanparadise.com.tw/" target="_blank" class="text-xs text-blue-500 hover:underline mt-1 inline-flex items-center stop-drag">🔗 查看官方網站</a>
                     </div>
                     <span class="text-gray-300 text-xl font-bold select-none">☰</span>
                 </li>
                 <li class="drag-item p-4 bg-white border-2 border-blue-100 rounded-xl flex items-center justify-between shadow-sm" draggable="true" data-id="B">
                     <div class="flex flex-col pr-2">
-                        <span class="font-medium text-gray-800">2. 選項 B：寒舍艾美 探索廚房</span>
+                        <span class="restaurant-name font-medium text-gray-800">選項 B：寒舍艾美 探索廚房</span>
                         <a href="https://www.lemeridien-taipei.com/webhtml/pages/restaurant/details.aspx?id=1" target="_blank" class="text-xs text-blue-500 hover:underline mt-1 inline-flex items-center stop-drag">🔗 查看官方網站</a>
                     </div>
                     <span class="text-gray-300 text-xl font-bold select-none">☰</span>
                 </li>
                 <li class="drag-item p-4 bg-white border-2 border-blue-100 rounded-xl flex items-center justify-between shadow-sm" draggable="true" data-id="C">
                     <div class="flex flex-col pr-2">
-                        <span class="font-medium text-gray-800">3. 選項 C：旭集 和食集錦</span>
+                        <span class="restaurant-name font-medium text-gray-800">選項 C：旭集 和食集錦</span>
                         <a href="https://www.xujisun.com.tw/" target="_blank" class="text-xs text-blue-500 hover:underline mt-1 inline-flex items-center stop-drag">🔗 查看官方網站</a>
                     </div>
                     <span class="text-gray-300 text-xl font-bold select-none">☰</span>
@@ -80,6 +86,13 @@
         // ⚠️ 請替換成你部署好的 Google Apps Script 網頁應用程式網址
         const GAS_URL = "https://script.google.com/macros/s/AKfycbxcxjtE9qXlG9tWWaoVIwxPowQ6wT68LJPiucVBNmJX4C_Oe2MDpSxrRdfABAzg9m1Aqw/exec"; 
         const selectedDates = new Set();
+        
+        // 保存餐廳原始名稱對照，以便動態排序時重組
+        const restaurantNames = {
+            'A': '選項 A：URBAN PARADISE',
+            'B': '選項 B：寒舍艾美 探索廚房',
+            'C': '選項 C：旭集 和食集錦'
+        };
 
         // 更新日期預覽顯示
         function updateDatePreview() {
@@ -95,7 +108,27 @@
             document.getElementById('date-preview').innerText = sortedDates.join(', ');
         }
 
-        // 日期點擊事件處理
+        // 重新渲染列表的序號數字
+        function refreshRankNumbers() {
+            document.querySelectorAll('#rank-list li').forEach((li, i) => {
+                const id = li.dataset.id;
+                const nameSpan = li.querySelector('.restaurant-name');
+                const cleanName = restaurantNames[id].replace(/^選項 [A-C]：/, '');
+                nameSpan.innerText = `${i + 1}. ${cleanName}`;
+            });
+        }
+
+        // 根據陣列順序動態重新排列餐廳 DOM
+        function sortRestaurantDOM(rankArray) {
+            const list = document.getElementById('rank-list');
+            const items = Array.from(list.querySelectorAll('li'));
+            rankArray.forEach(id => {
+                const targetItem = items.find(item => item.dataset.id === id);
+                if (targetItem) list.appendChild(targetItem);
+            });
+            refreshRankNumbers();
+        }
+
         function handleDateClick(dateStr, btn) {
             if(selectedDates.has(dateStr)) { 
                 selectedDates.delete(dateStr); 
@@ -107,56 +140,94 @@
             updateDatePreview();
         }
 
-        // --- 生成 6 月日曆 (2026年 6/1 是星期一，前補 1 個格子，共 30 天) ---
+        // 生成日曆
         const daysContainer6 = document.getElementById('calendar-days-6');
         for(let i=0; i<1; i++) daysContainer6.appendChild(document.createElement('div')); 
         for(let d=1; d<=30; d++){
             const btn = document.createElement('button');
             btn.innerText = d;
-            btn.className = "p-2 text-sm hover:bg-gray-200 rounded-full transition aspect-square flex items-center justify-center font-medium text-gray-700";
+            btn.className = "date-btn-6 p-2 text-sm hover:bg-gray-200 rounded-full transition aspect-square flex items-center justify-center font-medium text-gray-700";
+            btn.dataset.date = `6/${d}`;
             btn.onclick = () => handleDateClick(`6/${d}`, btn);
             daysContainer6.appendChild(btn);
         }
 
-        // --- 生成 7 月日曆 (2026年 7/1 是星期三，前補 3 個格子，共 31 天) ---
         const daysContainer7 = document.getElementById('calendar-days-7');
         for(let i=0; i<3; i++) daysContainer7.appendChild(document.createElement('div')); 
         for(let d=1; d<=31; d++){
             const btn = document.createElement('button');
             btn.innerText = d;
-            btn.className = "p-2 text-sm hover:bg-gray-200 rounded-full transition aspect-square flex items-center justify-center font-medium text-gray-700";
+            btn.className = "date-btn-7 p-2 text-sm hover:bg-gray-200 rounded-full transition aspect-square flex items-center justify-center font-medium text-gray-700";
+            btn.dataset.date = `7/${d}`;
             btn.onclick = () => handleDateClick(`7/${d}`, btn);
             daysContainer7.appendChild(btn);
         }
 
-        // --- 拖曳排序邏輯 ---
+        // 拖曳排序邏輯
         const list = document.getElementById('rank-list');
         let dragEl;
-        
         list.ondragstart = e => { 
-            // 如果點擊到的是超連結，不要觸發拖曳
-            if (e.target.classList.contains('stop-drag')) {
-                e.preventDefault();
-                return;
-            }
-            dragEl = e.target.closest('li'); 
-            dragEl.classList.add('opacity-40'); 
+            if (e.target.classList.contains('stop-drag')) return e.preventDefault();
+            dragEl = e.target.closest('li'); dragEl.classList.add('opacity-40'); 
         };
         list.ondragover = e => { e.preventDefault(); const next = e.target.closest('li'); if(next && next !== dragEl) list.insertBefore(dragEl, next); };
-        list.ondragend = e => { 
-            if(dragEl) dragEl.classList.remove('opacity-40');
-            document.querySelectorAll('#rank-list span:first-child').forEach((s,i) => {
-                s.innerText = `${i+1}. ${s.innerText.split('. ')[1]}`;
-            });
-        };
+        list.ondragend = e => { if(dragEl) dragEl.classList.remove('opacity-40'); refreshRankNumbers(); };
 
-        // 防止點擊超連結時觸發父元素的拖曳選取
         document.querySelectorAll('.stop-drag').forEach(a => {
             a.addEventListener('mousedown', (e) => e.stopPropagation());
             a.addEventListener('touchstart', (e) => e.stopPropagation());
         });
 
-        // --- 送出資料 ---
+        // --- 功能 A：讀取歷史紀錄 (GET) ---
+        document.getElementById('load-history').onclick = function() {
+            const name = document.getElementById('username').value.trim();
+            if (!name) return alert('請先輸入姓名再點擊讀取！');
+            
+            const loadBtn = this;
+            loadBtn.disabled = true; loadBtn.innerText = "讀取中...";
+            
+            fetch(`${GAS_URL}?name=${encodeURIComponent(name)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.result === "success") {
+                    if (data.exists) {
+                        // 清空原有選擇
+                        selectedDates.clear();
+                        document.querySelectorAll('.selected-date').forEach(el => el.classList.remove('selected-date'));
+                        
+                        // 勾選歷史日期
+                        data.dates.forEach(dateStr => {
+                            selectedDates.add(dateStr);
+                            const btn = document.querySelector(`[data-date="${dateStr}"]`);
+                            if (btn) btn.classList.add('selected-date');
+                        });
+                        updateDatePreview();
+                        
+                        // 排列歷史餐廳順序
+                        if (data.rank && data.rank.length > 0) {
+                            sortRestaurantDOM(data.rank);
+                        }
+                        
+                        showStatus(`📅 已成功載入「${name}」上次的投票紀錄！您現在可以進行修改並重新提交。`, "bg-amber-50", "text-amber-700", "border-amber-200");
+                    } else {
+                        alert(`查無「${name}」的投票紀錄，將為您建立新的投票！`);
+                    }
+                } else {
+                    alert('讀取失敗：' + data.message);
+                }
+            })
+            .catch(() => alert('連線失敗，請確認 API URL 是否正確。'))
+            .finally(() => { loadBtn.disabled = false; loadBtn.innerText = "讀取紀錄"; });
+        };
+
+        function showStatus(text, bgColor, textColor, borderColor) {
+            const box = document.getElementById('status-box');
+            box.className = `mb-6 p-4 rounded-2xl border text-center text-sm font-medium ${bgColor} ${textColor} ${borderColor}`;
+            box.innerText = text;
+            box.classList.remove('hidden');
+        }
+
+        // --- 功能 B：送出/更新資料 (POST) ---
         document.getElementById('submit').onclick = function() {
             const name = document.getElementById('username').value.trim();
             if(!name || !selectedDates.size) return alert('請填寫姓名並至少選擇一個日期！');
@@ -174,17 +245,15 @@
             .then(res => res.json())
             .then(data => {
                 if(data.result === "success") {
-                    alert('🎉 投票成功！感謝您的參與。');
-                    location.reload();
+                    const actionText = data.action === "updated" ? "更新" : "送出";
+                    showStatus(`🎉 成功${actionText}投票結果！\n姓名：${name}\n日期：${Array.from(selectedDates).sort().join(', ')}\n順序：${rank.map(id => id === 'A' ? 'URBAN' : id === 'B' ? '寒舍艾美' : '旭集').join(' > ')}`, "bg-emerald-50", "text-emerald-700", "border-emerald-200");
+                    alert(`投票成功！已${actionText}您的紀錄。頁面仍可繼續調整。`);
                 } else {
                     alert('寫入失敗：' + data.message);
-                    btn.disabled = false; btn.innerText = "重新提交";
                 }
             })
-            .catch(() => { 
-                alert('連線失敗，請確認 Apps Script 部署 URL 是否正確且權限已開至「所有人」'); 
-                btn.disabled = false; btn.innerText = "重新提交"; 
-            });
+            .catch(() => alert('連線失敗，請檢查權限設定。'))
+            .finally(() => { btn.disabled = false; btn.innerText = "重新提交投票"; });
         };
     </script>
 </body>

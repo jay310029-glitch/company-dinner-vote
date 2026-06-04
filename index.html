@@ -9,6 +9,8 @@
         .selected-date { background-color: #2563eb !important; color: white !important; border-radius: 9999px; }
         .drag-item { cursor: grab; }
         .drag-item:active { cursor: grabbing; }
+        /* 頒獎台平滑動畫 */
+        .podium-bar { transition: height 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
 </head>
 <body class="bg-gradient-to-tr from-slate-50 via-gray-100 to-blue-50 min-h-screen py-12 px-4 font-sans relative overflow-x-hidden">
@@ -32,9 +34,12 @@
             </div>
             
             <div>
-                <h3 class="font-bold text-xs uppercase tracking-wider text-gray-400 mb-3.5">🥩 餐廳綜合意願權重積分 (高分勝出)</h3>
-                <div id="restaurant-scores-container" class="space-y-4 text-sm">
-                    <p class="text-gray-400 text-xs italic">正在統計資料庫數據...</p>
+                <h3 class="font-bold text-xs uppercase tracking-wider text-gray-400 mb-6">🥩 餐廳熱門度排行</h3>
+                
+                <div class="bg-gray-50/50 border border-gray-100 rounded-2xl p-4 shadow-inner">
+                    <div id="restaurant-podium-container" class="flex items-end justify-center gap-2 h-48 pt-8">
+                        <p class="text-gray-400 text-xs italic self-center pb-8">正在統計資料庫數據...</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -124,8 +129,7 @@
         const selectedDates = new Set();
         const targetDeadline = new Date(2026, 5, 10, 17, 0, 0); 
 
-        // 🔥 💡 新增：自訂特殊國定假日清單 (格式為 "月/日")
-        // 2026 年的端午節是在 6 月 19 日 (星期五)，這裡先幫你填進去
+        // 自訂特殊國定假日清單 (2026 端午節)
         const specialHolidays = ["6/19"]; 
 
         const restaurantNames = {
@@ -225,24 +229,18 @@
             updateDatePreview();
         }
 
-        // 生成 6 月日曆 (加強版：支援特殊國定假日)
+        // 生成 6 月日曆
         const daysContainer6 = document.getElementById('calendar-days-6');
         if (daysContainer6) {
             for(let i=0; i<1; i++) daysContainer6.appendChild(document.createElement('div')); 
-            
             for(let d=1; d<=30; d++){
                 const btn = document.createElement('button');
                 btn.innerText = d;
-                
                 const dateKey = `6/${d}`;
                 const gridPosition = (1 + d - 1) % 7; 
-                
-                // 💡 判斷：如果是週末 OR 存在於特殊假日清單中，就變成紅字
                 const isWeekend = (gridPosition === 0 || gridPosition === 6);
                 const isHoliday = isWeekend || specialHolidays.includes(dateKey);
-                
                 const textColorClass = isHoliday ? "text-red-500 font-black" : "text-gray-700 font-bold";
-
                 btn.className = `p-2 text-xs hover:bg-gray-200 rounded-full transition aspect-square flex items-center justify-center bg-white/40 border border-gray-100 shadow-sm ${textColorClass}`;
                 btn.dataset.date = dateKey;
                 btn.onclick = () => handleDateClick(dateKey, btn);
@@ -250,24 +248,18 @@
             }
         }
 
-        // 生成 7 月日曆 (加強版：支援特殊國定假日)
+        // 生成 7 月日曆
         const daysContainer7 = document.getElementById('calendar-days-7');
         if (daysContainer7) {
             for(let i=0; i<3; i++) daysContainer7.appendChild(document.createElement('div')); 
-            
             for(let d=1; d<=31; d++){
                 const btn = document.createElement('button');
                 btn.innerText = d;
-                
                 const dateKey = `7/${d}`;
                 const gridPosition = (3 + d - 1) % 7; 
-                
-                // 💡 判斷：如果是週末 OR 存在於特殊假日清單中，就變成紅字
                 const isWeekend = (gridPosition === 0 || gridPosition === 6);
                 const isHoliday = isWeekend || specialHolidays.includes(dateKey);
-                
                 const textColorClass = isHoliday ? "text-red-500 font-black" : "text-gray-700 font-bold";
-
                 btn.className = `p-2 text-xs hover:bg-gray-200 rounded-full transition aspect-square flex items-center justify-center bg-white/40 border border-gray-100 shadow-sm ${textColorClass}`;
                 btn.dataset.date = dateKey;
                 btn.onclick = () => handleDateClick(dateKey, btn);
@@ -302,6 +294,7 @@
             a.addEventListener('touchstart', (e) => e.stopPropagation());
         });
 
+        // 🔥 💡 核心變更：全新設計的【餐廳頒獎台】動態渲染邏輯（隱藏分數）
         function loadGlobalSummary() {
             const cacheBuster = `${GAS_URL}?_nocache=${Date.now()}`;
             fetch(cacheBuster)
@@ -319,10 +312,11 @@
                     
                     if (totalPeople === 0) {
                         document.getElementById('top-dates-container').innerHTML = `<p class="text-gray-400 text-xs italic">目前尚無人投票</p>`;
-                        document.getElementById('restaurant-scores-container').innerHTML = `<p class="text-gray-400 text-xs italic">目前尚無人投票</p>`;
+                        document.getElementById('restaurant-podium-container').innerHTML = `<p class="text-gray-400 text-xs italic">目前尚無人投票</p>`;
                         return;
                     }
 
+                    // 1. 日期統計更新
                     const dateCounts = {};
                     votes.forEach(v => {
                         if (v && Array.isArray(v.dates)) {
@@ -330,7 +324,6 @@
                         }
                     });
                     const sortedDates = Object.entries(dateCounts).sort((a, b) => b[1] - a[1]).slice(0, 3);
-                    
                     let dateHtml = "";
                     sortedDates.forEach(([date, count]) => {
                         const pct = Math.round((count / totalPeople) * 100);
@@ -342,6 +335,7 @@
                     });
                     document.getElementById('top-dates-container').innerHTML = dateHtml || `<p class="text-gray-400 text-xs italic">尚未有交集日期</p>`;
 
+                    // 2. 餐廳志願積分計算
                     const restaurantScores = { 'A': 0, 'B': 0, 'C': 0 };
                     votes.forEach(v => {
                         if (v && Array.isArray(v.rank)) {
@@ -353,26 +347,43 @@
                         }
                     });
 
-                    const maxPossibleScore = totalPeople * 3;
+                    // 排序出 1、2、3 名 [ [id, score], ... ]
                     const sortedRestaurants = Object.entries(restaurantScores).sort((a, b) => b[1] - a[1]);
                     
-                    let restHtml = "";
-                    const colors = { 'A': 'from-orange-400 to-amber-500', 'B': 'from-purple-500 to-indigo-600', 'C': 'from-amber-500 to-yellow-600' };
+                    // 分配名次對應的樣式與高度（第一名高、第二名中、第三名低）
+                    const rankMeta = {
+                        0: { label: "1st", medal: "🥇", height: "h-36", color: "bg-gradient-to-t from-amber-500 to-yellow-400 text-amber-900 border-amber-300", nameColor: "text-amber-600 font-black text-sm" },
+                        1: { label: "2nd", medal: "🥈", height: "h-24", color: "bg-gradient-to-t from-slate-400 to-slate-200 text-slate-800 border-slate-300", nameColor: "text-slate-600 font-bold text-xs" },
+                        2: { label: "3rd", medal: "🥉", height: "h-16", color: "bg-gradient-to-t from-amber-700 to-amber-500 text-amber-100 border-amber-800", nameColor: "text-amber-800 font-semibold text-xs" }
+                    };
+
+                    // 將排名結果對應到對象中
+                    const podiumData = { first: null, second: null, third: null };
                     sortedRestaurants.forEach(([id, score], idx) => {
-                        const pct = maxPossibleScore > 0 ? Math.round((score / maxPossibleScore) * 100) : 0;
-                        const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : "🥉";
-                        restHtml += `
-                            <div>
-                                <div class="flex justify-between items-center mb-1.5">
-                                    <span class="font-bold text-gray-800 text-xs">${medal} ${restaurantNames[id]}</span>
-                                    <span class="text-xs font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">${score} 分</span>
-                                </div>
-                                <div class="w-full bg-gray-100 rounded-full h-2.5 shadow-inner">
-                                    <div class="bg-gradient-to-r ${colors[id]} h-2.5 rounded-full transition-all duration-500 shadow-sm" style="width: ${pct}%"></div>
+                        const itemHtml = `
+                            <div class="flex flex-col items-center flex-1 min-w-0">
+                                <span class="text-center ${rankMeta[idx].nameColor} mb-2 truncate w-full px-1" title="${restaurantNames[id]}">
+                                    ${restaurantNames[id]}
+                                </span>
+                                <div class="podium-bar ${rankMeta[idx].height} ${rankMeta[idx].color} w-full rounded-t-xl border-t-2 shadow-lg flex flex-col items-center justify-center relative group transition-all duration-300 hover:brightness-105">
+                                    <span class="text-xl md:text-2xl">${rankMeta[idx].medal}</span>
+                                    <span class="text-xs uppercase font-black tracking-wider opacity-80 mt-0.5">${rankMeta[idx].label}</span>
                                 </div>
                             </div>`;
+                        
+                        if (idx === 0) podiumData.first = itemHtml;
+                        if (idx === 1) podiumData.second = itemHtml;
+                        if (idx === 2) podiumData.third = itemHtml;
                     });
-                    document.getElementById('restaurant-scores-container').innerHTML = restHtml;
+
+                    // 💡 頒獎台經典排列順序：左邊放第 2 名、中間放第 1 名、右邊放第 3 名
+                    const finalPodiumHtml = `
+                        ${podiumData.second || ''}
+                        ${podiumData.first || ''}
+                        ${podiumData.third || ''}
+                    `;
+                    
+                    document.getElementById('restaurant-podium-container').innerHTML = finalPodiumHtml;
                 }
             })
             .catch(err => {
@@ -479,16 +490,15 @@
             };
         }
 
-        // 頁面初次自動初始化
+        // 頁面初次自動初始化與定時重整
         refreshRankNumbers();
         loadGlobalSummary();
         startCountdown();
-        
-        // 💡 新增：設定每 5 分鐘 (300,000 毫秒) 自動重新整理左邊看板
+
+        // 設定每 5 分鐘自動刷新左邊看板
         setInterval(function() {
-        console.log("自動定時刷新看板數據...");
-        loadGlobalSummary();
-        }, 300000); // 300000 毫秒 = 5 分鐘 (若要改為 1 分鐘可填 60000)
+            loadGlobalSummary();
+        }, 300000);
     </script>
 </body>
 </html>

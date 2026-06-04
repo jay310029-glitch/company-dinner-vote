@@ -21,7 +21,7 @@
                 <input type="text" id="username" class="flex-1 border-2 border-gray-200 rounded-xl p-3 focus:border-blue-500 outline-none bg-white" placeholder="請輸入姓名">
                 <button id="load-history" class="bg-blue-500 text-white font-semibold px-4 rounded-xl hover:bg-blue-600 transition text-sm whitespace-nowrap">讀取紀錄</button>
             </div>
-            <p class="text-xs text-gray-400 mt-2">💡 輸入姓名點擊「讀取紀錄」可修改過去的投票。</p>
+            <p class="text-xs text-gray-400 mt-2">💡 輸入姓名點擊「讀取紀錄」可修改過去的投票（不分大小寫）。</p>
         </div>
 
         <div id="status-box" class="hidden mb-6 p-4 rounded-2xl border text-center font-medium"></div>
@@ -72,7 +72,7 @@
                 <li class="drag-item p-4 bg-white border-2 border-blue-100 rounded-xl flex items-center justify-between shadow-sm" draggable="true" data-id="C">
                     <div class="flex flex-col pr-2">
                         <span class="restaurant-name font-medium text-gray-800">選項 C：旭集 和食集錦</span>
-                        <a href="https://www.xujisun.com.tw/" target="_blank" class="text-xs text-blue-500 hover:underline mt-1 inline-flex items-center stop-drag">🔗 查看官方網站</a>
+                        <a href="https://www.thesunrise.com.tw/" target="_blank" class="text-xs text-blue-500 hover:underline mt-1 inline-flex items-center stop-drag">🔗 查看官方網站</a>
                     </div>
                     <span class="text-gray-300 text-xl font-bold select-none">☰</span>
                 </li>
@@ -87,7 +87,6 @@
         const GAS_URL = "https://script.google.com/macros/s/AKfycbxcxjtE9qXlG9tWWaoVIwxPowQ6wT68LJPiucVBNmJX4C_Oe2MDpSxrRdfABAzg9m1Aqw/exec"; 
         const selectedDates = new Set();
         
-        // 保存餐廳原始名稱對照，以便動態排序時重組
         const restaurantNames = {
             'A': '選項 A：URBAN PARADISE',
             'B': '選項 B：寒舍艾美 探索廚房',
@@ -140,7 +139,7 @@
             updateDatePreview();
         }
 
-        // 生成日曆
+        // 生成日曆 (2026年 6/1 星期一，7/1 星期三)
         const daysContainer6 = document.getElementById('calendar-days-6');
         for(let i=0; i<1; i++) daysContainer6.appendChild(document.createElement('div')); 
         for(let d=1; d<=30; d++){
@@ -191,11 +190,9 @@
             .then(data => {
                 if (data.result === "success") {
                     if (data.exists) {
-                        // 清空原有選擇
                         selectedDates.clear();
                         document.querySelectorAll('.selected-date').forEach(el => el.classList.remove('selected-date'));
                         
-                        // 勾選歷史日期
                         data.dates.forEach(dateStr => {
                             selectedDates.add(dateStr);
                             const btn = document.querySelector(`[data-date="${dateStr}"]`);
@@ -203,7 +200,6 @@
                         });
                         updateDatePreview();
                         
-                        // 排列歷史餐廳順序
                         if (data.rank && data.rank.length > 0) {
                             sortRestaurantDOM(data.rank);
                         }

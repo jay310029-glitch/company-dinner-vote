@@ -13,7 +13,13 @@
 </head>
 <body class="bg-gray-100 min-h-screen py-10 px-4 font-sans">
     <div class="max-w-md mx-auto bg-white rounded-3xl shadow-lg p-6">
-        <h1 class="text-2xl font-bold text-center mb-6">聚餐時間與餐廳投票</h1>
+        <h1 class="text-2xl font-bold text-center mb-2">聚餐時間與餐廳投票</h1>
+        
+        <div class="mb-6 bg-red-50 border border-red-200 rounded-2xl p-3 text-center">
+            <p class="text-sm font-semibold text-red-600 flex items-center justify-center gap-1">
+                ⏳ 投票截止時間：2026/06/10 17:00
+            </p>
+        </div>
         
         <div class="mb-6 bg-blue-50 p-4 rounded-2xl border border-blue-100">
             <label class="block text-gray-700 font-bold mb-2">您的姓名</label>
@@ -139,7 +145,7 @@
             updateDatePreview();
         }
 
-        // 生成日曆 (2026年 6/1 星期一，7/1 星期三)
+        // 生成日曆
         const daysContainer6 = document.getElementById('calendar-days-6');
         for(let i=0; i<1; i++) daysContainer6.appendChild(document.createElement('div')); 
         for(let d=1; d<=30; d++){

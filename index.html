@@ -62,13 +62,13 @@
 
             <div class="mb-8 border-t border-gray-50 pt-5">
                 <h2 class="font-bold text-base text-gray-800 mb-1">1. 選擇可參加日期 (多選)</h2>
-                <p class="text-xs text-gray-400 mb-4">可跨月選擇多個日期</p>
+                <p class="text-xs text-gray-400 mb-4">可跨月選擇多個日期（紅字為例假日或國定假日）</p>
                 
                 <div class="space-y-6">
                     <div class="bg-gray-50/70 p-4 rounded-2xl border border-gray-200/60 shadow-sm">
                         <div class="text-center font-bold mb-3 text-sm text-gray-600">2026年 6月</div>
                         <div class="grid grid-cols-7 gap-1 text-center text-xs font-bold text-gray-400 mb-2">
-                            <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+                            <div class="text-red-500">日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div class="text-red-500">六</div>
                         </div>
                         <div class="grid grid-cols-7 gap-1" id="calendar-days-6"></div>
                     </div>
@@ -76,7 +76,7 @@
                     <div class="bg-gray-50/70 p-4 rounded-2xl border border-gray-200/60 shadow-sm">
                         <div class="text-center font-bold mb-3 text-sm text-gray-600">2026年 7月</div>
                         <div class="grid grid-cols-7 gap-1 text-center text-xs font-bold text-gray-400 mb-2">
-                            <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+                            <div class="text-red-500">日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div class="text-red-500">六</div>
                         </div>
                         <div class="grid grid-cols-7 gap-1" id="calendar-days-7"></div>
                     </div>
@@ -122,9 +122,11 @@
         // ⚠️ 請填入你部署好的 Google Apps Script 網頁應用程式網址
         const GAS_URL = "https://script.google.com/macros/s/AKfycbyjwKNok08rS7Vr1xRWmNziqhgWqzvm9wmXNWBMZJeYBV3guY4GJ5brG55gukU_P1VhWg/exec"; 
         const selectedDates = new Set();
-        
-        // 🎯 設定截止目標時間 (年, 月-1, 日, 時, 分, 秒) -> 2026/06/10 17:00:00
         const targetDeadline = new Date(2026, 5, 10, 17, 0, 0); 
+
+        // 🔥 💡 新增：自訂特殊國定假日清單 (格式為 "月/日")
+        // 2026 年的端午節是在 6 月 19 日 (星期五)，這裡先幫你填進去
+        const specialHolidays = ["6/19"]; 
 
         const restaurantNames = {
             'A': 'URBAN PARADISE',
@@ -132,7 +134,7 @@
             'C': '旭集 和食集錦'
         };
 
-        // 🔥 新增：動態倒數計時核心邏輯
+        // 動態倒數計時
         function startCountdown() {
             const deadlineTip = document.getElementById('deadline-tip');
             const deadlineBox = document.getElementById('deadline-box');
@@ -144,10 +146,8 @@
 
                 if (diffTime <= 0) {
                     deadlineTip.innerText = "⚠️ 本活動投票已截止！";
-                    // 變更為灰色警告框
                     deadlineBox.className = "mb-6 bg-gray-100 border border-gray-300 rounded-2xl p-3 text-center shadow-sm";
                     deadlineTip.className = "text-sm font-bold text-gray-500 flex items-center justify-center gap-1";
-                    // 禁用提交按鈕
                     if(submitBtn) {
                         submitBtn.disabled = true;
                         submitBtn.innerText = "已截止投票";
@@ -157,19 +157,15 @@
                     return;
                 }
 
-                // 計算天、時、分、秒
                 const days = Math.floor(diffTime / (1000 * 60 * 60 * 24));
                 const hours = Math.floor((diffTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                 const minutes = Math.floor((diffTime % (1000 * 60 * 60)) / (1000 * 60));
                 const seconds = Math.floor((diffTime % (1000 * 60)) / 1000);
 
-                // 組合生動的倒數文字
                 deadlineTip.innerText = `⏳ 距離投票截止還剩：${days} 天 ${hours} 小時 ${minutes} 分 ${seconds} 秒`;
             }
 
-            // 啟動時先執行一次，避免畫面空白一秒
             updateTimer();
-            // 每秒重刷一次
             const timerInterval = setInterval(updateTimer, 1000);
         }
 
@@ -229,30 +225,52 @@
             updateDatePreview();
         }
 
-        // 生成 6 月日曆 (前方補1個空位)
+        // 生成 6 月日曆 (加強版：支援特殊國定假日)
         const daysContainer6 = document.getElementById('calendar-days-6');
         if (daysContainer6) {
             for(let i=0; i<1; i++) daysContainer6.appendChild(document.createElement('div')); 
+            
             for(let d=1; d<=30; d++){
                 const btn = document.createElement('button');
                 btn.innerText = d;
-                btn.className = "date-btn-6 p-2 text-xs hover:bg-gray-200 rounded-full transition aspect-square flex items-center justify-center font-bold text-gray-700 bg-white/40 border border-gray-100 shadow-sm";
-                btn.dataset.date = `6/${d}`;
-                btn.onclick = () => handleDateClick(`6/${d}`, btn);
+                
+                const dateKey = `6/${d}`;
+                const gridPosition = (1 + d - 1) % 7; 
+                
+                // 💡 判斷：如果是週末 OR 存在於特殊假日清單中，就變成紅字
+                const isWeekend = (gridPosition === 0 || gridPosition === 6);
+                const isHoliday = isWeekend || specialHolidays.includes(dateKey);
+                
+                const textColorClass = isHoliday ? "text-red-500 font-black" : "text-gray-700 font-bold";
+
+                btn.className = `p-2 text-xs hover:bg-gray-200 rounded-full transition aspect-square flex items-center justify-center bg-white/40 border border-gray-100 shadow-sm ${textColorClass}`;
+                btn.dataset.date = dateKey;
+                btn.onclick = () => handleDateClick(dateKey, btn);
                 daysContainer6.appendChild(btn);
             }
         }
 
-        // 生成 7 月日曆 (前方補3個空位)
+        // 生成 7 月日曆 (加強版：支援特殊國定假日)
         const daysContainer7 = document.getElementById('calendar-days-7');
         if (daysContainer7) {
             for(let i=0; i<3; i++) daysContainer7.appendChild(document.createElement('div')); 
+            
             for(let d=1; d<=31; d++){
                 const btn = document.createElement('button');
                 btn.innerText = d;
-                btn.className = "date-btn-7 p-2 text-xs hover:bg-gray-200 rounded-full transition aspect-square flex items-center justify-center font-bold text-gray-700 bg-white/40 border border-gray-100 shadow-sm";
-                btn.dataset.date = `7/${d}`;
-                btn.onclick = () => handleDateClick(`7/${d}`, btn);
+                
+                const dateKey = `7/${d}`;
+                const gridPosition = (3 + d - 1) % 7; 
+                
+                // 💡 判斷：如果是週末 OR 存在於特殊假日清單中，就變成紅字
+                const isWeekend = (gridPosition === 0 || gridPosition === 6);
+                const isHoliday = isWeekend || specialHolidays.includes(dateKey);
+                
+                const textColorClass = isHoliday ? "text-red-500 font-black" : "text-gray-700 font-bold";
+
+                btn.className = `p-2 text-xs hover:bg-gray-200 rounded-full transition aspect-square flex items-center justify-center bg-white/40 border border-gray-100 shadow-sm ${textColorClass}`;
+                btn.dataset.date = dateKey;
+                btn.onclick = () => handleDateClick(dateKey, btn);
                 daysContainer7.appendChild(btn);
             }
         }
@@ -419,7 +437,6 @@
         const submitBtn = document.getElementById('submit');
         if (submitBtn) {
             submitBtn.onclick = function() {
-                // 防錯：送出前先嚴格檢查時間
                 if (new Date() > targetDeadline) {
                     alert("抱歉！投票時間已截止，無法再提交或修改數據。");
                     return;
@@ -465,7 +482,7 @@
         // 頁面初次自動初始化
         refreshRankNumbers();
         loadGlobalSummary();
-        startCountdown(); // 🔥 啟動前端動態倒數計時器
+        startCountdown();
     </script>
 </body>
 </html>

@@ -11,10 +11,9 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* 💡 將全域字體強制指定為剛剛引入的手寫隨性體 */
         body, button, input, span, div, h1, h2, h3, ul, li, p {
             font-family: 'Noto Sans Handwritten', 'PingFang TC', 'Microsoft JhengHei', sans-serif !important;
-            letter-spacing: 0.05em; /* 稍微拉開字距，更有手寫小品的呼吸感 */
+            letter-spacing: 0.05em; 
         }
         .selected-date { background-color: #2563eb !important; color: white !important; border-radius: 9999px; }
         .drag-item { cursor: grab; }
@@ -45,7 +44,7 @@
             <div>
                 <h3 class="font-bold text-xs uppercase tracking-wider text-gray-400 mb-4">🥩 餐廳熱門度排行</h3>
                 <div class="bg-gray-50/50 border border-gray-100 rounded-2xl p-3 shadow-inner max-w-sm mx-auto">
-                    <div id="restaurant-podium-container" class="flex items-end justify-center gap-3 h-36 pt-6 w-full mx-auto">
+                    <div id="restaurant-podium-container" class="flex items-end justify-center gap-3 h-36 pt-8 w-full mx-auto">
                         <p class="text-gray-400 text-xs italic self-center pb-4">正在統計資料庫數據...</p>
                     </div>
                 </div>
@@ -65,8 +64,8 @@
             <div class="mb-6 bg-blue-50/50 backdrop-blur-sm p-4 rounded-2xl border border-blue-100/70 shadow-sm">
                 <label class="block text-gray-700 font-bold text-sm mb-2">您的姓名</label>
                 <div class="flex space-x-2">
-                    <input type="text" id="username" class="flex-1 border-2 border-gray-100 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none bg-white/80 transition text-sm shadow-inner" placeholder="請輸入姓名">
-                    <button id="load-history" class="bg-blue-600 text-white font-bold px-4 rounded-xl hover:bg-blue-700 shadow-md shadow-blue-200 active:scale-95 transition text-sm whitespace-nowrap">讀取紀錄</button>
+                    <input type="text" id="username" class="flex-1 border-2 border-gray-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none bg-white/80 transition text-sm shadow-inner" placeholder="請輸入姓名">
+                    <button id="load-history" class="bg-blue-600 text-white font-semibold px-4 rounded-xl hover:bg-blue-700 shadow-md shadow-blue-200 active:scale-95 transition text-sm whitespace-nowrap">讀取紀錄</button>
                 </div>
                 <p class="text-xs text-gray-400 mt-2">💡 輸入姓名點擊「讀取紀錄」可修改過去的投票（不分大小寫）。</p>
             </div>
@@ -299,7 +298,7 @@
             a.addEventListener('touchstart', (e) => e.stopPropagation());
         });
 
-        // 讀取與渲染
+        // 讀取與動態渲染
         function loadGlobalSummary() {
             const cacheBuster = `${GAS_URL}?_nocache=${Date.now()}`;
             fetch(cacheBuster)
@@ -355,18 +354,21 @@
                     const sortedRestaurants = Object.entries(restaurantScores).sort((a, b) => b[1] - a[1]);
                     
                     const rankMeta = {
-                        0: { label: "1st", medal: "🥇", height: "h-24", color: "bg-gradient-to-t from-amber-500 to-yellow-400 text-amber-900 border-amber-300", nameColor: "text-amber-600 font-black text-xs" },
-                        1: { label: "2nd", medal: "🥈", height: "h-16", color: "bg-gradient-to-t from-slate-400 to-slate-200 text-slate-800 border-slate-300", nameColor: "text-slate-600 font-bold text-[11px]" },
-                        2: { label: "3rd", medal: "🥉", height: "h-10", color: "bg-gradient-to-t from-amber-700 to-amber-500 text-amber-100 border-amber-800", nameColor: "text-amber-800 font-semibold text-[11px]" }
+                        0: { label: "1st", medal: "🥇", height: "h-24", color: "bg-gradient-to-t from-amber-500 to-yellow-400 text-amber-900 border-amber-300", nameColor: "text-amber-600 font-black text-[11px] leading-tight" },
+                        1: { label: "2nd", medal: "🥈", height: "h-16", color: "bg-gradient-to-t from-slate-400 to-slate-200 text-slate-800 border-slate-300", nameColor: "text-slate-600 font-bold text-[10px] leading-tight" },
+                        2: { label: "3rd", medal: "🥉", height: "h-10", color: "bg-gradient-to-t from-amber-700 to-amber-500 text-amber-100 border-amber-800", nameColor: "text-amber-800 font-semibold text-[10px] leading-tight" }
                     };
 
                     const podiumData = { first: null, second: null, third: null };
                     sortedRestaurants.forEach(([id, score], idx) => {
+                        // 💡 核心變更點：將原先直接呈現原始名稱，改為將「半形空格」全自動替換成 HTML 換行標籤 <br>
+                        const formattedName = restaurantNames[id].replace(/\s+/g, '<br>');
+
                         const itemHtml = `
-                            <div class="flex flex-col items-center flex-1 min-w-0">
-                                <span class="text-center ${rankMeta[idx].nameColor} mb-1 truncate w-full px-0.5" title="${restaurantNames[id]}">
-                                    ${restaurantNames[id]}
-                                </span>
+                            <div class="flex flex-col items-center flex-1 min-w-0 justify-end h-full">
+                                <div class="text-center ${rankMeta[idx].nameColor} w-full px-0.5 h-10 flex items-center justify-center mb-1" title="${restaurantNames[id]}">
+                                    <span>${formattedName}</span>
+                                </div>
                                 <div class="podium-bar ${rankMeta[idx].height} ${rankMeta[idx].color} w-full rounded-t-lg border-t-2 shadow-md flex flex-col items-center justify-center relative group transition-all duration-300">
                                     <span class="text-lg">${rankMeta[idx].medal}</span>
                                     <span class="text-[9px] uppercase font-black tracking-wider opacity-80">${rankMeta[idx].label}</span>
@@ -428,7 +430,7 @@
                             alert(`查無「${name}」的投票紀錄，已為您清空介面，請直接填寫新的投票！`);
                         }
                     } else {
-                        alert('讀取失敗：' + data.message);
+                        alert('讀取失敗：' + message);
                     }
                 })
                 .catch(() => alert('連線失敗，請確認 API URL 是否正確。'))

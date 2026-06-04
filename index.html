@@ -12,10 +12,10 @@
         .podium-bar { transition: height 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
 </head>
-<body class="bg-gradient-to-tr from-slate-50 via-gray-100 to-blue-50 min-h-screen py-12 px-4 font-sans relative overflow-x-hidden">
+<body class="bg-gradient-to-tr from-slate-50 via-gray-100 to-blue-50 min-h-screen py-12 px-4 font-sans relative">
     
-    <div class="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-gradient-to-r from-blue-200 to-indigo-200 rounded-full blur-3xl opacity-30 pointer-events-none z-0"></div>
-    <div class="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-gradient-to-r from-emerald-100 to-teal-200 rounded-full blur-3xl opacity-40 pointer-events-none z-0"></div>
+    <div class="hidden md:block absolute top-0 left-0 w-[400px] h-[400px] bg-gradient-to-r from-blue-200 to-indigo-200 rounded-full blur-[100px] opacity-20 pointer-events-none z-0"></div>
+    <div class="hidden md:block absolute bottom-0 right-0 w-[400px] h-[400px] bg-gradient-to-r from-emerald-100 to-teal-200 rounded-full blur-[100px] opacity-30 pointer-events-none z-0"></div>
 
     <div class="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-start relative z-10">
         
@@ -34,7 +34,6 @@
             
             <div>
                 <h3 class="font-bold text-xs uppercase tracking-wider text-gray-400 mb-4">🥩 餐廳熱門度排行</h3>
-                
                 <div class="bg-gray-50/50 border border-gray-100 rounded-2xl p-3 shadow-inner max-w-sm mx-auto">
                     <div id="restaurant-podium-container" class="flex items-end justify-center gap-3 h-36 pt-6 w-full mx-auto">
                         <p class="text-gray-400 text-xs italic self-center pb-4">正在統計資料庫數據...</p>
@@ -57,7 +56,7 @@
                 <label class="block text-gray-700 font-bold text-sm mb-2">您的姓名</label>
                 <div class="flex space-x-2">
                     <input type="text" id="username" class="flex-1 border-2 border-gray-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none bg-white/80 transition text-sm shadow-inner" placeholder="請輸入姓名">
-                    <button id="load-history" class="bg-blue-600 text-white font-bold px-4 rounded-xl hover:bg-blue-700 shadow-md shadow-blue-200 active:scale-95 transition text-sm whitespace-nowrap">讀取紀錄</button>
+                    <button id="load-history" class="bg-blue-600 text-white font-semibold px-4 rounded-xl hover:bg-blue-700 shadow-md shadow-blue-200 active:scale-95 transition text-sm whitespace-nowrap">讀取紀錄</button>
                 </div>
                 <p class="text-xs text-gray-400 mt-2">💡 輸入姓名點擊「讀取紀錄」可修改過去的投票（不分大小寫）。</p>
             </div>
@@ -123,6 +122,7 @@
     </div>
 
     <script>
+        // ⚠️ 請填入你部署好的 Google Apps Script 網頁應用程式網址
         const GAS_URL = "https://script.google.com/macros/s/AKfycbyjwKNok08rS7Vr1xRWmNziqhgWqzvm9wmXNWBMZJeYBV3guY4GJ5brG55gukU_P1VhWg/exec"; 
         const selectedDates = new Set();
         const targetDeadline = new Date(2026, 5, 10, 17, 0, 0); 
@@ -345,7 +345,6 @@
 
                     const sortedRestaurants = Object.entries(restaurantScores).sort((a, b) => b[1] - a[1]);
                     
-                    // 💡 調整點：配合縮小後的容器，微調各個領獎台柱子的高度 (h-24 | h-16 | h-10)
                     const rankMeta = {
                         0: { label: "1st", medal: "🥇", height: "h-24", color: "bg-gradient-to-t from-amber-500 to-yellow-400 text-amber-900 border-amber-300", nameColor: "text-amber-600 font-black text-xs" },
                         1: { label: "2nd", medal: "🥈", height: "h-16", color: "bg-gradient-to-t from-slate-400 to-slate-200 text-slate-800 border-slate-300", nameColor: "text-slate-600 font-bold text-[11px]" },

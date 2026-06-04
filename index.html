@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聚餐投票 🍽️</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .selected-date { background-color: #3b82f6 !important; color: white; border-radius: 9999px; }
+        .drag-item { cursor: grab; }
+        .drag-item:active { cursor: grabbing; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen py-10 px-4 font-sans">
+    <div class="max-w-md mx-auto bg-white rounded-3xl shadow-lg p-6">
+        <h1 class="text-2xl font-bold text-center mb-6">聚餐時間與餐廳投票</h1>
+        
+        <div class="mb-6">
+            <label class="block text-gray-700 font-bold mb-2">您的姓名</label>
+            <input type="text" id="username" class="w-full border-2 border-gray-200 rounded-xl p-3 focus:border-blue-500 outline-none" placeholder="請輸入姓名">
+        </div>
+
+        <div class="mb-8">
+            <h2 class="font-bold text-lg mb-2">1. 選擇可參加日期 (多選)</h2>
+            <div class="bg-gray-50 p-4 rounded-2xl border border-gray-200">
+                <div class="text-center font-bold mb-3 text-gray-600">2026年 6月</div>
+                <div class="grid grid-cols-7 gap-1 text-center text-xs text-gray-400 mb-2">
+                    <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+                </div>
+                <div class="grid grid-cols-7 gap-1" id="calendar-days"></div>
+            </div>
+            <div class="mt-2 text-sm text-blue-600">已選：<span id="date-preview">無</span></div>
+        </div>
+
+        <div class="mb-8">
+            <h2 class="font-bold text-lg mb-2">2. 排列餐廳志願 (拖曳排序)</h2>
+            <p class="text-xs text-gray-400 mb-3">最上方為第 1 志願</p>
+            <ul id="rank-list" class="space-y-2">
+                <li class="drag-item p-4 bg-white border-2 border-blue-100 rounded-xl flex justify-between shadow-sm" draggable="true" data-id="A"><span>1. 選項 A：築間火鍋</span><span class="text-gray-300">≡</span></li>
+                <li class="drag-item p-4 bg-white border-2 border-blue-100 rounded-xl flex justify-between shadow-sm" draggable="true" data-id="B"><span>2. 選項 B：響食天堂</span><span class="text-gray-300">≡</span></li>
+                <li class="drag-item p-4 bg-white border-2 border-blue-100 rounded-xl flex justify-between shadow-sm" draggable="true" data-id="C"><span>3. 選項 C：屋馬燒肉</span><span class="text-gray-300">≡</span></li>
+            </ul>
+        </div>
+
+        <button id="submit" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl hover:bg-blue-700 transition active:scale-95">提交投票</button>
+    </div>
+
+    <script>
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbxcxjtE9qXlG9tWWaoVIwxPowQ6wT68LJPiucVBNmJX4C_Oe2MDpSxrRdfABAzg9m1Aqw/exec"; // ⚠️ 改成你的網址
+        const selectedDates = new Set();
+
+        // 生成日曆 (簡化版)
+        const daysContainer = document.getElementById('calendar-days');
+        for(let i=0; i<1; i++) daysContainer.appendChild(document.createElement('div')); // 補位
+        for(let d=1; d<=30; d++){
+            const btn = document.createElement('button');
+            btn.innerText = d;
+            btn.className = "p-2 text-sm hover:bg-gray-200 rounded-full transition";
+            btn.onclick = () => {
+                const ds = `6/${d}`;
+                if(selectedDates.has(ds)) { selectedDates.delete(ds); btn.classList.remove('selected-date'); }
+                else { selectedDates.add(ds); btn.classList.add('selected-date'); }
+                document.getElementById('date-preview').innerText = selectedDates.size ? Array.from(selectedDates).sort().join(', ') : '無';
+            };
+            daysContainer.appendChild(btn);
+        }
+
+        // 拖曳排序邏輯
+        const list = document.getElementById('rank-list');
+        let dragEl;
+        list.ondragstart = e => { dragEl = e.target; e.target.classList.add('opacity-40'); };
+        list.ondragover = e => { e.preventDefault(); const next = e.target.closest('li'); if(next && next !== dragEl) list.insertBefore(dragEl, next); };
+        list.ondragend = e => { 
+            e.target.classList.remove('opacity-40');
+            document.querySelectorAll('#rank-list span:first-child').forEach((s,i) => {
+                s.innerText = `${i+1}. ${s.innerText.split('. ')[1]}`;
+            });
+        };
+
+        // 送出資料
+        document.getElementById('submit').onclick = function() {
+            const name = document.getElementById('username').value;
+            if(!name || !selectedDates.size) return alert('姓名與日期必填！');
+            
+            const btn = this;
+            btn.disabled = true; btn.innerText = "傳送中...";
+            
+            const rank = Array.from(document.querySelectorAll('#rank-list li')).map(li => li.dataset.id);
+            
+            fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({ name, dates: Array.from(selectedDates), rank }),
+                headers: { 'Content-Type': 'text/plain' }
+            })
+            .then(() => { alert('投票成功！'); location.reload(); })
+            .catch(() => { alert('失敗，請檢查網址或權限'); btn.disabled = false; btn.innerText = "重新提交"; });
+        };
+    </script>
+</body>
+</html>

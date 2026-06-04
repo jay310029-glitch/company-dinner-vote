@@ -63,21 +63,21 @@
             <ul id="rank-list" class="space-y-3 pb-2">
                 <li class="drag-item p-4 bg-white border-2 border-blue-100 rounded-xl flex items-center justify-between shadow-sm" draggable="true" data-id="A">
                     <div class="flex flex-col pr-2">
-                        <span class="restaurant-name font-medium text-gray-800">選項 A：URBAN PARADISE</span>
+                        <span class="restaurant-name font-medium text-gray-800">1. URBAN PARADISE</span>
                         <a href="https://www.urbanparadise.com.tw/" target="_blank" class="text-xs text-blue-500 hover:underline mt-1 inline-flex items-center stop-drag">🔗 查看官方網站</a>
                     </div>
                     <span class="text-gray-300 text-xl font-bold select-none">☰</span>
                 </li>
                 <li class="drag-item p-4 bg-white border-2 border-blue-100 rounded-xl flex items-center justify-between shadow-sm" draggable="true" data-id="B">
                     <div class="flex flex-col pr-2">
-                        <span class="restaurant-name font-medium text-gray-800">選項 B：寒舍艾美 探索廚房</span>
+                        <span class="restaurant-name font-medium text-gray-800">2. 寒舍艾美 探索廚房</span>
                         <a href="https://www.lemeridien-taipei.com/webhtml/pages/restaurant/details.aspx?id=1" target="_blank" class="text-xs text-blue-500 hover:underline mt-1 inline-flex items-center stop-drag">🔗 查看官方網站</a>
                     </div>
                     <span class="text-gray-300 text-xl font-bold select-none">☰</span>
                 </li>
                 <li class="drag-item p-4 bg-white border-2 border-blue-100 rounded-xl flex items-center justify-between shadow-sm" draggable="true" data-id="C">
                     <div class="flex flex-col pr-2">
-                        <span class="restaurant-name font-medium text-gray-800">選項 C：旭集 和食集錦</span>
+                        <span class="restaurant-name font-medium text-gray-800">3. 旭集 和食集錦</span>
                         <a href="https://www.xujisunrise.com.tw/zh-TW/home" target="_blank" class="text-xs text-blue-500 hover:underline mt-1 inline-flex items-center stop-drag">🔗 查看官方網站</a>
                     </div>
                     <span class="text-gray-300 text-xl font-bold select-none">☰</span>
@@ -94,9 +94,9 @@
         const selectedDates = new Set();
         
         const restaurantNames = {
-            'A': '選項 A：URBAN PARADISE',
-            'B': '選項 B：寒舍艾美 探索廚房',
-            'C': '選項 C：旭集 和食集錦'
+            'A': 'URBAN PARADISE',
+            'B': '寒舍艾美 探索廚房',
+            'C': '旭集 和食集錦'
         };
 
         function updateDatePreview() {
@@ -112,17 +112,20 @@
             document.getElementById('date-preview').innerText = sortedDates.join(', ');
         }
 
+        // 優化後的序號渲染：避免使用正則拆解文字，改用乾淨的對照表重組
         function refreshRankNumbers() {
             document.querySelectorAll('#rank-list li').forEach((li, i) => {
                 const id = li.dataset.id;
                 const nameSpan = li.querySelector('.restaurant-name');
-                const cleanName = restaurantNames[id].replace(/^選項 [A-C]：/, '');
-                nameSpan.innerText = `${i + 1}. ${cleanName}`;
+                if (nameSpan && restaurantNames[id]) {
+                    nameSpan.innerText = `${i + 1}. ${restaurantNames[id]}`;
+                }
             });
         }
 
         function sortRestaurantDOM(rankArray) {
             const list = document.getElementById('rank-list');
+            if (!list) return;
             const items = Array.from(list.querySelectorAll('li'));
             rankArray.forEach(id => {
                 const targetItem = items.find(item => item.dataset.id === id);
@@ -131,7 +134,6 @@
             refreshRankNumbers();
         }
 
-        // 💡 新增：將介面與資料徹底重設回初始狀態（保留原本餐廳 A->B->C 順序）
         function resetFormToDefault() {
             selectedDates.clear();
             document.querySelectorAll('.selected-date').forEach(el => el.classList.remove('selected-date'));
@@ -151,7 +153,7 @@
             updateDatePreview();
         }
 
-        // 生成日曆
+        // --- 1. 先安全生成日曆 DOM 節點 ---
         const daysContainer6 = document.getElementById('calendar-days-6');
         for(let i=0; i<1; i++) daysContainer6.appendChild(document.createElement('div')); 
         for(let d=1; d<=30; d++){
@@ -174,7 +176,126 @@
             daysContainer7.appendChild(btn);
         }
 
-        // 拖曳排序
+        // --- 2. 綁定拖曳排序事件 ---
         const list = document.getElementById('rank-list');
         let dragEl;
-        list.ondragstart = e =>
+        if (list) {
+            list.ondragstart = e => { 
+                if (e.target.classList.contains('stop-drag')) return e.preventDefault();
+                dragEl = e.target.closest('li'); 
+                if (dragEl) dragEl.classList.add('opacity-40'); 
+            };
+            
+            list.ondragover = e => { 
+                e.preventDefault(); 
+                const next = e.target.closest('li'); 
+                if (next && next !== dragEl) {
+                    const box = next.getBoundingClientRect();
+                    const offset = e.clientY - box.top - (box.height / 2);
+                    list.insertBefore(dragEl, offset > 0 ? next.nextSibling : next);
+                } else if (!next && dragEl) {
+                    list.appendChild(dragEl);
+                }
+            };
+            
+            list.ondragend = e => { 
+                if(dragEl) dragEl.classList.remove('opacity-40'); 
+                refreshRankNumbers(); 
+            };
+        }
+
+        document.querySelectorAll('.stop-drag').forEach(a => {
+            a.addEventListener('mousedown', (e) => e.stopPropagation());
+            a.addEventListener('touchstart', (e) => e.stopPropagation());
+        });
+
+        // --- 3. 讀取歷史紀錄 (GET) ---
+        document.getElementById('load-history').onclick = function() {
+            const name = document.getElementById('username').value.trim();
+            if (!name) return alert('請先輸入姓名再點擊讀取！');
+            
+            const loadBtn = this;
+            loadBtn.disabled = true; loadBtn.innerText = "讀取中...";
+            
+            fetch(`${GAS_URL}?name=${encodeURIComponent(name)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.result === "success") {
+                    if (data.exists) {
+                        selectedDates.clear();
+                        document.querySelectorAll('.selected-date').forEach(el => el.classList.remove('selected-date'));
+                        
+                        data.dates.forEach(dateStr => {
+                            selectedDates.add(dateStr);
+                            const btn = document.querySelector(`[data-date="${dateStr}"]`);
+                            if (btn) btn.classList.add('selected-date');
+                        });
+                        updateDatePreview();
+                        
+                        if (data.rank && data.rank.length > 0) {
+                            sortRestaurantDOM(data.rank);
+                        }
+                        
+                        showStatus(`📅 已成功載入「${name}」上次的投票紀錄！您現在可以進行修改並重新提交。`, "bg-amber-50", "text-amber-700", "border-amber-200");
+                    } else {
+                        resetFormToDefault();
+                        alert(`查無「${name}」的投票紀錄，已為您清空介面，請直接填寫新的投票！`);
+                    }
+                } else {
+                    alert('讀取失敗：' + data.message);
+                }
+            })
+            .catch(() => alert('連線失敗，請確認 API URL 是否正確。'))
+            .finally(() => { loadBtn.disabled = false; loadBtn.innerText = "讀取紀錄"; });
+        };
+
+        function showStatus(text, bgColor, textColor, borderColor) {
+            const box = document.getElementById('status-box');
+            if (box) {
+                box.className = `mb-6 p-4 rounded-2xl border text-center text-sm font-medium ${bgColor} ${textColor} ${borderColor}`;
+                box.innerText = text;
+                box.classList.remove('hidden');
+            }
+        }
+
+        // --- 4. 送出/更新資料 (POST) ---
+        document.getElementById('submit').onclick = function() {
+            const name = document.getElementById('username').value.trim();
+            if(!name || !selectedDates.size) return alert('請填寫姓名並至少選擇一個日期！');
+            
+            const btn = this;
+            btn.disabled = true; btn.innerText = "傳送中...";
+            
+            const rank = Array.from(document.querySelectorAll('#rank-list li')).map(li => li.dataset.id);
+            
+            fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({ name, dates: Array.from(selectedDates), rank }),
+                headers: { 'Content-Type': 'text/plain' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.result === "success") {
+                    const actionText = data.action === "updated" ? "更新" : "送出";
+                    
+                    const readableRank = rank.map(id => {
+                        if(id === 'A') return 'URBAN';
+                        if(id === 'B') return '寒舍艾美';
+                        return '旭集';
+                    }).join(' > ');
+
+                    showStatus(`🎉 成功${actionText}投票結果！\n姓名：${name}\n日期：${Array.from(selectedDates).sort().join(', ')}\n順序：${readableRank}`, "bg-emerald-50", "text-emerald-700", "border-emerald-200");
+                    alert(`投票成功！已${actionText}您的紀錄。頁面仍可繼續調整。`);
+                } else {
+                    alert('寫入失敗：' + data.message);
+                }
+            })
+            .catch(() => alert('連線失敗，請檢查權限設定。'))
+            .finally(() => { btn.disabled = false; btn.innerText = "重新提交投票"; });
+        };
+
+        // 頁面初次載入時，先安全地初始化一次數字序號
+        refreshRankNumbers();
+    </script>
+</body>
+</html>

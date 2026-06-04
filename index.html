@@ -13,6 +13,28 @@
 </head>
 <body class="bg-gray-100 min-h-screen py-10 px-4 font-sans space-y-8">
     
+    <div class="max-w-md mx-auto bg-white rounded-3xl shadow-lg p-6 border-2 border-emerald-100">
+        <div class="flex items-center justify-between mb-4 border-b pb-2">
+            <h2 class="text-xl font-bold text-gray-800 flex items-center gap-1">📊 聚餐投票即時總整理 (頂端)</h2>
+            <span class="total-count-badge bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-1 rounded-full">載入中...</span>
+        </div>
+        
+        <div class="mb-6">
+            <h3 class="font-bold text-sm text-gray-500 mb-3">📅 最受歡迎的日期 Top 3</h3>
+            <div class="top-dates-container space-y-3 text-sm text-gray-700">
+                <p class="text-gray-400 text-xs italic">正在統計資料庫數據...</p>
+            </div>
+        </div>
+        
+        <div>
+            <h3 class="font-bold text-sm text-gray-500 mb-3">🥩 餐廳綜合意願權重積分</h3>
+            <div class="restaurant-scores-container space-y-4 text-sm">
+                <p class="text-gray-400 text-xs italic">正在統計資料庫數據...</p>
+            </div>
+        </div>
+    </div>
+
+
     <div class="max-w-md mx-auto bg-white rounded-3xl shadow-lg p-6">
         <h1 class="text-2xl font-bold text-center mb-2">聚餐時間與餐廳投票</h1>
         
@@ -89,22 +111,23 @@
         <button id="submit" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl hover:bg-blue-700 transition active:scale-95">提交投票</button>
     </div>
 
+
     <div class="max-w-md mx-auto bg-white rounded-3xl shadow-lg p-6 border-2 border-emerald-100">
         <div class="flex items-center justify-between mb-4 border-b pb-2">
-            <h2 class="text-xl font-bold text-gray-800 flex items-center gap-1">📊 聚餐投票即時總整理</h2>
-            <span id="total-count-badge" class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-1 rounded-full">載入中...</span>
+            <h2 class="text-xl font-bold text-gray-800 flex items-center gap-1">📊 聚餐投票即時總整理 (底端)</h2>
+            <span class="total-count-badge bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-1 rounded-full">載入中...</span>
         </div>
         
         <div class="mb-6">
             <h3 class="font-bold text-sm text-gray-500 mb-3">📅 最受歡迎的日期 Top 3</h3>
-            <div id="top-dates-container" class="space-y-3 text-sm text-gray-700">
+            <div class="top-dates-container space-y-3 text-sm text-gray-700">
                 <p class="text-gray-400 text-xs italic">正在統計資料庫數據...</p>
             </div>
         </div>
         
         <div>
-            <h3 class="font-bold text-sm text-gray-500 mb-3">🥩 餐廳綜合意願權重積分 (高分勝出)</h3>
-            <div id="restaurant-scores-container" class="space-y-4 text-sm">
+            <h3 class="font-bold text-sm text-gray-500 mb-3">🥩 餐廳綜合意願權重積分</h3>
+            <div class="restaurant-scores-container space-y-4 text-sm">
                 <p class="text-gray-400 text-xs italic">正在統計資料庫數據...</p>
             </div>
         </div>
@@ -224,7 +247,7 @@
             a.addEventListener('touchstart', (e) => e.stopPropagation());
         });
 
-        // --- 💡 核心新增：從後端撈取全體資料並計算看板數據 ---
+        // --- 💡 核心優化：同時對頂端與底端的看板進行同步資料更新 ---
         function loadGlobalSummary() {
             fetch(GAS_URL)
             .then(res => res.json())
@@ -232,15 +255,19 @@
                 if (data.result === "success" && data.totalVotes) {
                     const votes = data.totalVotes;
                     const totalPeople = votes.length;
-                    document.getElementById('total-count-badge').innerText = `共 ${totalPeople} 人投票`;
+                    
+                    // 同步更新兩端的「投票總人數標籤」
+                    document.querySelectorAll('.total-count-badge').forEach(el => {
+                        el.innerText = `共 ${totalPeople} 人投票`;
+                    });
                     
                     if (totalPeople === 0) {
-                        document.getElementById('top-dates-container').innerHTML = `<p class="text-gray-400 text-xs italic">目前尚無人投票</p>`;
-                        document.getElementById('restaurant-scores-container').innerHTML = `<p class="text-gray-400 text-xs italic">目前尚無人投票</p>`;
+                        document.querySelectorAll('.top-dates-container').forEach(el => el.innerHTML = `<p class="text-gray-400 text-xs italic">目前尚無人投票</p>`);
+                        document.querySelectorAll('.restaurant-scores-container').forEach(el => el.innerHTML = `<p class="text-gray-400 text-xs italic">目前尚無人投票</p>`);
                         return;
                     }
 
-                    // 1. 計算日期
+                    // 1. 計算最熱門日期
                     const dateCounts = {};
                     votes.forEach(v => {
                         v.dates.forEach(d => { dateCounts[d] = (dateCounts[d] || 0) + 1; });
@@ -256,19 +283,22 @@
                                 <div class="w-full bg-gray-100 rounded-full h-2"><div class="bg-blue-500 h-2 rounded-full" style="width: ${pct}%"></div></div>
                             </div>`;
                     });
-                    document.getElementById('top-dates-container').innerHTML = dateHtml || `<p class="text-gray-400 text-xs italic">尚未有交集日期</p>`;
+                    // 同步套用到兩個日期的 DOM 容器中
+                    document.querySelectorAll('.top-dates-container').forEach(el => {
+                        el.innerHTML = dateHtml || `<p class="text-gray-400 text-xs italic">尚未有交集日期</p>`;
+                    });
 
-                    // 2. 計算餐廳權重積分
+                    // 2. 計算餐廳積分
                     const restaurantScores = { 'A': 0, 'B': 0, 'C': 0 };
                     votes.forEach(v => {
                         if (v.rank && v.rank.length > 0) {
                             v.rank.forEach((id, index) => {
-                                restaurantScores[id] += (3 - index); // 第1名+3, 第2名+2, 第3名+1
+                                restaurantScores[id] += (3 - index); 
                             });
                         }
                     });
 
-                    const maxPossibleScore = totalPeople * 3; // 最高理想總分
+                    const maxPossibleScore = totalPeople * 3;
                     const sortedRestaurants = Object.entries(restaurantScores).sort((a, b) => b[1] - a[1]);
                     
                     let restHtml = "";
@@ -287,11 +317,14 @@
                                 </div>
                             </div>`;
                     });
-                    document.getElementById('restaurant-scores-container').innerHTML = restHtml;
+                    // 同步套用到兩個餐廳分數的 DOM 容器中
+                    document.querySelectorAll('.restaurant-scores-container').forEach(el => {
+                        el.innerHTML = restHtml;
+                    });
                 }
             })
             .catch(() => {
-                document.getElementById('total-count-badge').innerText = "連線失敗";
+                document.querySelectorAll('.total-count-badge').forEach(el => el.innerText = "連線失敗");
             });
         }
 
@@ -373,8 +406,7 @@
                     showStatus(`🎉 成功${actionText}投票結果！\n姓名：${name}\n日期：${Array.from(selectedDates).sort().join(', ')}\n順序：${readableRank}`, "bg-emerald-50", "text-emerald-700", "border-emerald-200");
                     alert(`投票成功！已${actionText}您的紀錄。頁面仍可繼續調整。`);
                     
-                    // 💡 新增：投完票後立刻重新整理統計看板
-                    loadGlobalSummary();
+                    loadGlobalSummary(); // 投完票同時重整上下兩個看板
                 } else {
                     alert('寫入失敗：' + data.message);
                 }
@@ -385,7 +417,7 @@
 
         // 頁面初次載入
         refreshRankNumbers();
-        loadGlobalSummary(); // 💡 網頁一打開自動讀取當前開票進度
+        loadGlobalSummary();
     </script>
 </body>
 </html>

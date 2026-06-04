@@ -78,7 +78,7 @@
                 <li class="drag-item p-4 bg-white border-2 border-blue-100 rounded-xl flex items-center justify-between shadow-sm" draggable="true" data-id="C">
                     <div class="flex flex-col pr-2">
                         <span class="restaurant-name font-medium text-gray-800">選項 C：旭集 和食集錦</span>
-                        <a href="https://www.thesunrise.com.tw/" target="_blank" class="text-xs text-blue-500 hover:underline mt-1 inline-flex items-center stop-drag">🔗 查看官方網站</a>
+                        <a href="https://www.xujisunrise.com.tw/zh-TW/home" target="_blank" class="text-xs text-blue-500 hover:underline mt-1 inline-flex items-center stop-drag">🔗 查看官方網站</a>
                     </div>
                     <span class="text-gray-300 text-xl font-bold select-none">☰</span>
                 </li>
@@ -89,7 +89,7 @@
     </div>
 
     <script>
-        // ⚠️ 請替換成你部署好的 Google Apps Script 網頁應用程式網址
+        // ⚠️ 請填入你部署好的 Google Apps Script 網頁應用程式網址
         const GAS_URL = "https://script.google.com/macros/s/AKfycbxcxjtE9qXlG9tWWaoVIwxPowQ6wT68LJPiucVBNmJX4C_Oe2MDpSxrRdfABAzg9m1Aqw/exec"; 
         const selectedDates = new Set();
         
@@ -99,7 +99,6 @@
             'C': '選項 C：旭集 和食集錦'
         };
 
-        // 更新日期預覽顯示
         function updateDatePreview() {
             if (selectedDates.size === 0) {
                 document.getElementById('date-preview').innerText = '無';
@@ -113,7 +112,6 @@
             document.getElementById('date-preview').innerText = sortedDates.join(', ');
         }
 
-        // 重新渲染列表的序號數字
         function refreshRankNumbers() {
             document.querySelectorAll('#rank-list li').forEach((li, i) => {
                 const id = li.dataset.id;
@@ -123,7 +121,6 @@
             });
         }
 
-        // 根據陣列順序動態重新排列餐廳 DOM
         function sortRestaurantDOM(rankArray) {
             const list = document.getElementById('rank-list');
             const items = Array.from(list.querySelectorAll('li'));
@@ -168,7 +165,7 @@
             daysContainer7.appendChild(btn);
         }
 
-        // 拖曳排序邏輯
+        // 拖曳排序
         const list = document.getElementById('rank-list');
         let dragEl;
         list.ondragstart = e => { 
@@ -183,7 +180,7 @@
             a.addEventListener('touchstart', (e) => e.stopPropagation());
         });
 
-        // --- 功能 A：讀取歷史紀錄 (GET) ---
+        // 讀取歷史紀錄
         document.getElementById('load-history').onclick = function() {
             const name = document.getElementById('username').value.trim();
             if (!name) return alert('請先輸入姓名再點擊讀取！');
@@ -229,7 +226,7 @@
             box.classList.remove('hidden');
         }
 
-        // --- 功能 B：送出/更新資料 (POST) ---
+        // 送出/更新資料
         document.getElementById('submit').onclick = function() {
             const name = document.getElementById('username').value.trim();
             if(!name || !selectedDates.size) return alert('請填寫姓名並至少選擇一個日期！');

@@ -43,9 +43,9 @@
             <h1 class="text-2xl font-black text-center mb-1 text-gray-800 tracking-tight">聚餐時間與餐廳投票</h1>
             <p class="text-xs text-gray-400 text-center mb-5">請填寫您的姓名，並選出可以配合的時間與餐廳排序</p>
             
-            <div class="mb-6 bg-red-50/70 backdrop-blur-sm border border-red-100 rounded-2xl p-3 text-center shadow-sm">
-                <p class="text-sm font-semibold text-red-600 flex items-center justify-center gap-1">
-                    ⏳ 投票截止時間：2026/06/10 17:00
+            <div id="deadline-box" class="mb-6 bg-red-50/70 backdrop-blur-sm border border-red-100 rounded-2xl p-3 text-center shadow-sm">
+                <p id="deadline-tip" class="text-sm font-bold text-red-600 flex items-center justify-center gap-1">
+                    ⏳ 距離投票截止還剩：計算中...
                 </p>
             </div>
             
@@ -123,11 +123,55 @@
         const GAS_URL = "https://script.google.com/macros/s/AKfycbyjwKNok08rS7Vr1xRWmNziqhgWqzvm9wmXNWBMZJeYBV3guY4GJ5brG55gukU_P1VhWg/exec"; 
         const selectedDates = new Set();
         
+        // 🎯 設定截止目標時間 (年, 月-1, 日, 時, 分, 秒) -> 2026/06/10 17:00:00
+        const targetDeadline = new Date(2026, 5, 10, 17, 0, 0); 
+
         const restaurantNames = {
             'A': 'URBAN PARADISE',
             'B': '寒舍艾美 探索廚房',
             'C': '旭集 和食集錦'
         };
+
+        // 🔥 新增：動態倒數計時核心邏輯
+        function startCountdown() {
+            const deadlineTip = document.getElementById('deadline-tip');
+            const deadlineBox = document.getElementById('deadline-box');
+            const submitBtn = document.getElementById('submit');
+
+            function updateTimer() {
+                const now = new Date();
+                const diffTime = targetDeadline - now;
+
+                if (diffTime <= 0) {
+                    deadlineTip.innerText = "⚠️ 本活動投票已截止！";
+                    // 變更為灰色警告框
+                    deadlineBox.className = "mb-6 bg-gray-100 border border-gray-300 rounded-2xl p-3 text-center shadow-sm";
+                    deadlineTip.className = "text-sm font-bold text-gray-500 flex items-center justify-center gap-1";
+                    // 禁用提交按鈕
+                    if(submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.innerText = "已截止投票";
+                        submitBtn.className = "w-full bg-gray-300 text-gray-500 font-bold py-4 rounded-2xl cursor-not-allowed";
+                    }
+                    clearInterval(timerInterval);
+                    return;
+                }
+
+                // 計算天、時、分、秒
+                const days = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diffTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((diffTime % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diffTime % (1000 * 60)) / 1000);
+
+                // 組合生動的倒數文字
+                deadlineTip.innerText = `⏳ 距離投票截止還剩：${days} 天 ${hours} 小時 ${minutes} 分 ${seconds} 秒`;
+            }
+
+            // 啟動時先執行一次，避免畫面空白一秒
+            updateTimer();
+            // 每秒重刷一次
+            const timerInterval = setInterval(updateTimer, 1000);
+        }
 
         function updateDatePreview() {
             const previewEl = document.getElementById('date-preview');
@@ -185,7 +229,7 @@
             updateDatePreview();
         }
 
-        // 生成 6 月日曆 (2026年6月1日為星期一，前方補0個空位)
+        // 生成 6 月日曆 (前方補1個空位)
         const daysContainer6 = document.getElementById('calendar-days-6');
         if (daysContainer6) {
             for(let i=0; i<1; i++) daysContainer6.appendChild(document.createElement('div')); 
@@ -199,7 +243,7 @@
             }
         }
 
-        // 生成 7 月日曆 (2026年7月1日為星期三，前方補3個空位)
+        // 生成 7 月日曆 (前方補3個空位)
         const daysContainer7 = document.getElementById('calendar-days-7');
         if (daysContainer7) {
             for(let i=0; i<3; i++) daysContainer7.appendChild(document.createElement('div')); 
@@ -240,7 +284,6 @@
             a.addEventListener('touchstart', (e) => e.stopPropagation());
         });
 
-        // 讀取全體即時統計進度
         function loadGlobalSummary() {
             const cacheBuster = `${GAS_URL}?_nocache=${Date.now()}`;
             fetch(cacheBuster)
@@ -262,7 +305,6 @@
                         return;
                     }
 
-                    // 1. 日期開票統計
                     const dateCounts = {};
                     votes.forEach(v => {
                         if (v && Array.isArray(v.dates)) {
@@ -282,7 +324,6 @@
                     });
                     document.getElementById('top-dates-container').innerHTML = dateHtml || `<p class="text-gray-400 text-xs italic">尚未有交集日期</p>`;
 
-                    // 2. 餐廳積分權重統計
                     const restaurantScores = { 'A': 0, 'B': 0, 'C': 0 };
                     votes.forEach(v => {
                         if (v && Array.isArray(v.rank)) {
@@ -323,7 +364,6 @@
             });
         }
 
-        // 讀取個人歷史紀錄
         const loadHistoryBtn = document.getElementById('load-history');
         if (loadHistoryBtn) {
             loadHistoryBtn.onclick = function() {
@@ -376,10 +416,15 @@
             }
         }
 
-        // 送出/更新資料
         const submitBtn = document.getElementById('submit');
         if (submitBtn) {
             submitBtn.onclick = function() {
+                // 防錯：送出前先嚴格檢查時間
+                if (new Date() > targetDeadline) {
+                    alert("抱歉！投票時間已截止，無法再提交或修改數據。");
+                    return;
+                }
+
                 const name = document.getElementById('username').value.trim();
                 if(!name || !selectedDates.size) return alert('請填寫姓名並至少選擇一個日期！');
                 
@@ -420,6 +465,7 @@
         // 頁面初次自動初始化
         refreshRankNumbers();
         loadGlobalSummary();
+        startCountdown(); // 🔥 啟動前端動態倒數計時器
     </script>
 </body>
 </html>

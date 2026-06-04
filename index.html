@@ -15,12 +15,14 @@
     <div class="max-w-md mx-auto bg-white rounded-3xl shadow-lg p-6">
         <h1 class="text-2xl font-bold text-center mb-2">聚餐時間與餐廳投票</h1>
         
+        <!-- 顯示截止時間提示框 -->
         <div class="mb-6 bg-red-50 border border-red-200 rounded-2xl p-3 text-center">
             <p class="text-sm font-semibold text-red-600 flex items-center justify-center gap-1">
                 ⏳ 投票截止時間：2026/06/10 17:00
             </p>
         </div>
         
+        <!-- 姓名輸入與歷史讀取 -->
         <div class="mb-6 bg-blue-50 p-4 rounded-2xl border border-blue-100">
             <label class="block text-gray-700 font-bold mb-2">您的姓名</label>
             <div class="flex space-x-2">
@@ -30,13 +32,16 @@
             <p class="text-xs text-gray-400 mt-2">💡 輸入姓名點擊「讀取紀錄」可修改過去的投票（不分大小寫）。</p>
         </div>
 
+        <!-- 狀態提示框（提交成功後顯示） -->
         <div id="status-box" class="hidden mb-6 p-4 rounded-2xl border text-center font-medium"></div>
 
+        <!-- 1. 日期選擇 -->
         <div class="mb-8">
             <h2 class="font-bold text-lg mb-2">1. 選擇可參加日期 (多選)</h2>
             <p class="text-xs text-gray-400 mb-3">可跨月選擇多個日期</p>
             
             <div class="space-y-6">
+                <!-- 2026年 6月日曆 -->
                 <div class="bg-gray-50 p-4 rounded-2xl border border-gray-200">
                     <div class="text-center font-bold mb-3 text-gray-600">2026年 6月</div>
                     <div class="grid grid-cols-7 gap-1 text-center text-xs text-gray-400 mb-2">
@@ -45,6 +50,7 @@
                     <div class="grid grid-cols-7 gap-1" id="calendar-days-6"></div>
                 </div>
 
+                <!-- 2026年 7月日曆 -->
                 <div class="bg-gray-50 p-4 rounded-2xl border border-gray-200">
                     <div class="text-center font-bold mb-3 text-gray-600">2026年 7月</div>
                     <div class="grid grid-cols-7 gap-1 text-center text-xs text-gray-400 mb-2">
@@ -57,10 +63,11 @@
             <div class="mt-3 text-sm text-blue-600">已選日期：<span id="date-preview" class="font-semibold">無</span></div>
         </div>
 
+        <!-- 2. 餐廳志願排序 -->
         <div class="mb-8">
             <h2 class="font-bold text-lg mb-2">2. 排列餐廳志願 (拖曳排序)</h2>
             <p class="text-xs text-gray-400 mb-3">最上方為第 1 志願，☰ 可拖曳</p>
-            <ul id="rank-list" class="space-y-3">
+            <ul id="rank-list" class="space-y-3 pb-2">
                 <li class="drag-item p-4 bg-white border-2 border-blue-100 rounded-xl flex items-center justify-between shadow-sm" draggable="true" data-id="A">
                     <div class="flex flex-col pr-2">
                         <span class="restaurant-name font-medium text-gray-800">選項 A：URBAN PARADISE</span>
@@ -165,15 +172,39 @@
             daysContainer7.appendChild(btn);
         }
 
-        // 拖曳排序
+        // 🛠️ 修正後的拖曳排序邏輯（解決無法直接滑到底部的問題）
         const list = document.getElementById('rank-list');
         let dragEl;
+        
         list.ondragstart = e => { 
             if (e.target.classList.contains('stop-drag')) return e.preventDefault();
-            dragEl = e.target.closest('li'); dragEl.classList.add('opacity-40'); 
+            dragEl = e.target.closest('li'); 
+            dragEl.classList.add('opacity-40'); 
         };
-        list.ondragover = e => { e.preventDefault(); const next = e.target.closest('li'); if(next && next !== dragEl) list.insertBefore(dragEl, next); };
-        list.ondragend = e => { if(dragEl) dragEl.classList.remove('opacity-40'); refreshRankNumbers(); };
+        
+        list.ondragover = e => { 
+            e.preventDefault(); 
+            const next = e.target.closest('li'); 
+            
+            if (next && next !== dragEl) {
+                // 如果滑鼠在某個項目的上半部，插在前面；下半部則插在後面
+                const box = next.getBoundingClientRect();
+                const offset = e.clientY - box.top - (box.height / 2);
+                if (offset > 0) {
+                    list.insertBefore(dragEl, next.nextSibling);
+                } else {
+                    list.insertBefore(dragEl, next);
+                }
+            } else if (!next) {
+                // 💡 關鍵防呆：如果滑鼠移到了空隙或清單最底部，直接 append 到最後面
+                list.appendChild(dragEl);
+            }
+        };
+        
+        list.ondragend = e => { 
+            if(dragEl) dragEl.classList.remove('opacity-40'); 
+            refreshRankNumbers(); 
+        };
 
         document.querySelectorAll('.stop-drag').forEach(a => {
             a.addEventListener('mousedown', (e) => e.stopPropagation());

@@ -11,7 +11,8 @@
         .drag-item:active { cursor: grabbing; }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen py-10 px-4 font-sans">
+<body class="bg-gray-100 min-h-screen py-10 px-4 font-sans space-y-8">
+    
     <div class="max-w-md mx-auto bg-white rounded-3xl shadow-lg p-6">
         <h1 class="text-2xl font-bold text-center mb-2">聚餐時間與餐廳投票</h1>
         
@@ -88,6 +89,27 @@
         <button id="submit" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl hover:bg-blue-700 transition active:scale-95">提交投票</button>
     </div>
 
+    <div class="max-w-md mx-auto bg-white rounded-3xl shadow-lg p-6 border-2 border-emerald-100">
+        <div class="flex items-center justify-between mb-4 border-b pb-2">
+            <h2 class="text-xl font-bold text-gray-800 flex items-center gap-1">📊 聚餐投票即時總整理</h2>
+            <span id="total-count-badge" class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-1 rounded-full">載入中...</span>
+        </div>
+        
+        <div class="mb-6">
+            <h3 class="font-bold text-sm text-gray-500 mb-3">📅 最受歡迎的日期 Top 3</h3>
+            <div id="top-dates-container" class="space-y-3 text-sm text-gray-700">
+                <p class="text-gray-400 text-xs italic">正在統計資料庫數據...</p>
+            </div>
+        </div>
+        
+        <div>
+            <h3 class="font-bold text-sm text-gray-500 mb-3">🥩 餐廳綜合意願權重積分 (高分勝出)</h3>
+            <div id="restaurant-scores-container" class="space-y-4 text-sm">
+                <p class="text-gray-400 text-xs italic">正在統計資料庫數據...</p>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ⚠️ 請填入你部署好的 Google Apps Script 網頁應用程式網址
         const GAS_URL = "https://script.google.com/macros/s/AKfycbyjwKNok08rS7Vr1xRWmNziqhgWqzvm9wmXNWBMZJeYBV3guY4GJ5brG55gukU_P1VhWg/exec"; 
@@ -112,7 +134,6 @@
             document.getElementById('date-preview').innerText = sortedDates.join(', ');
         }
 
-        // 優化後的序號渲染：避免使用正則拆解文字，改用乾淨的對照表重組
         function refreshRankNumbers() {
             document.querySelectorAll('#rank-list li').forEach((li, i) => {
                 const id = li.dataset.id;
@@ -153,7 +174,7 @@
             updateDatePreview();
         }
 
-        // --- 1. 先安全生成日曆 DOM 節點 ---
+        // 生成日曆
         const daysContainer6 = document.getElementById('calendar-days-6');
         for(let i=0; i<1; i++) daysContainer6.appendChild(document.createElement('div')); 
         for(let d=1; d<=30; d++){
@@ -176,7 +197,7 @@
             daysContainer7.appendChild(btn);
         }
 
-        // --- 2. 綁定拖曳排序事件 ---
+        // 拖曳排序
         const list = document.getElementById('rank-list');
         let dragEl;
         if (list) {
@@ -185,10 +206,8 @@
                 dragEl = e.target.closest('li'); 
                 if (dragEl) dragEl.classList.add('opacity-40'); 
             };
-            
             list.ondragover = e => { 
-                e.preventDefault(); 
-                const next = e.target.closest('li'); 
+                e.preventDefault(); const next = e.target.closest('li'); 
                 if (next && next !== dragEl) {
                     const box = next.getBoundingClientRect();
                     const offset = e.clientY - box.top - (box.height / 2);
@@ -197,11 +216,7 @@
                     list.appendChild(dragEl);
                 }
             };
-            
-            list.ondragend = e => { 
-                if(dragEl) dragEl.classList.remove('opacity-40'); 
-                refreshRankNumbers(); 
-            };
+            list.ondragend = e => { if(dragEl) dragEl.classList.remove('opacity-40'); refreshRankNumbers(); };
         }
 
         document.querySelectorAll('.stop-drag').forEach(a => {
@@ -209,7 +224,78 @@
             a.addEventListener('touchstart', (e) => e.stopPropagation());
         });
 
-        // --- 3. 讀取歷史紀錄 (GET) ---
+        // --- 💡 核心新增：從後端撈取全體資料並計算看板數據 ---
+        function loadGlobalSummary() {
+            fetch(GAS_URL)
+            .then(res => res.json())
+            .then(data => {
+                if (data.result === "success" && data.totalVotes) {
+                    const votes = data.totalVotes;
+                    const totalPeople = votes.length;
+                    document.getElementById('total-count-badge').innerText = `共 ${totalPeople} 人投票`;
+                    
+                    if (totalPeople === 0) {
+                        document.getElementById('top-dates-container').innerHTML = `<p class="text-gray-400 text-xs italic">目前尚無人投票</p>`;
+                        document.getElementById('restaurant-scores-container').innerHTML = `<p class="text-gray-400 text-xs italic">目前尚無人投票</p>`;
+                        return;
+                    }
+
+                    // 1. 計算日期
+                    const dateCounts = {};
+                    votes.forEach(v => {
+                        v.dates.forEach(d => { dateCounts[d] = (dateCounts[d] || 0) + 1; });
+                    });
+                    const sortedDates = Object.entries(dateCounts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+                    
+                    let dateHtml = "";
+                    sortedDates.forEach(([date, count]) => {
+                        const pct = Math.round((count / totalPeople) * 100);
+                        dateHtml += `
+                            <div>
+                                <div class="flex justify-between text-xs mb-1"><span>📅 ${date}</span><span class="font-bold text-blue-600">${count} 票 (${pct}%)</span></div>
+                                <div class="w-full bg-gray-100 rounded-full h-2"><div class="bg-blue-500 h-2 rounded-full" style="width: ${pct}%"></div></div>
+                            </div>`;
+                    });
+                    document.getElementById('top-dates-container').innerHTML = dateHtml || `<p class="text-gray-400 text-xs italic">尚未有交集日期</p>`;
+
+                    // 2. 計算餐廳權重積分
+                    const restaurantScores = { 'A': 0, 'B': 0, 'C': 0 };
+                    votes.forEach(v => {
+                        if (v.rank && v.rank.length > 0) {
+                            v.rank.forEach((id, index) => {
+                                restaurantScores[id] += (3 - index); // 第1名+3, 第2名+2, 第3名+1
+                            });
+                        }
+                    });
+
+                    const maxPossibleScore = totalPeople * 3; // 最高理想總分
+                    const sortedRestaurants = Object.entries(restaurantScores).sort((a, b) => b[1] - a[1]);
+                    
+                    let restHtml = "";
+                    const colors = { 'A': 'bg-orange-400', 'B': 'bg-purple-500', 'C': 'bg-amber-500' };
+                    sortedRestaurants.forEach(([id, score], idx) => {
+                        const pct = maxPossibleScore > 0 ? Math.round((score / maxPossibleScore) * 100) : 0;
+                        const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : "🥉";
+                        restHtml += `
+                            <div>
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="font-medium text-gray-800">${medal} ${restaurantNames[id]}</span>
+                                    <span class="text-xs font-bold text-gray-500">${score} 分</span>
+                                </div>
+                                <div class="w-full bg-gray-100 rounded-full h-3">
+                                    <div class="${colors[id]} h-3 rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+                                </div>
+                            </div>`;
+                    });
+                    document.getElementById('restaurant-scores-container').innerHTML = restHtml;
+                }
+            })
+            .catch(() => {
+                document.getElementById('total-count-badge').innerText = "連線失敗";
+            });
+        }
+
+        // --- 讀取歷史紀錄 ---
         document.getElementById('load-history').onclick = function() {
             const name = document.getElementById('username').value.trim();
             if (!name) return alert('請先輸入姓名再點擊讀取！');
@@ -258,7 +344,7 @@
             }
         }
 
-        // --- 4. 送出/更新資料 (POST) ---
+        // --- 送出/更新資料 ---
         document.getElementById('submit').onclick = function() {
             const name = document.getElementById('username').value.trim();
             if(!name || !selectedDates.size) return alert('請填寫姓名並至少選擇一個日期！');
@@ -286,6 +372,9 @@
 
                     showStatus(`🎉 成功${actionText}投票結果！\n姓名：${name}\n日期：${Array.from(selectedDates).sort().join(', ')}\n順序：${readableRank}`, "bg-emerald-50", "text-emerald-700", "border-emerald-200");
                     alert(`投票成功！已${actionText}您的紀錄。頁面仍可繼續調整。`);
+                    
+                    // 💡 新增：投完票後立刻重新整理統計看板
+                    loadGlobalSummary();
                 } else {
                     alert('寫入失敗：' + data.message);
                 }
@@ -294,8 +383,9 @@
             .finally(() => { btn.disabled = false; btn.innerText = "重新提交投票"; });
         };
 
-        // 頁面初次載入時，先安全地初始化一次數字序號
+        // 頁面初次載入
         refreshRankNumbers();
+        loadGlobalSummary(); // 💡 網頁一打開自動讀取當前開票進度
     </script>
 </body>
 </html>
